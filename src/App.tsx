@@ -1,51 +1,47 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { NavLink, Route, Routes, Navigate } from "react-router-dom";
+import Setup from "./pages/Setup";
+import Compose from "./pages/Compose";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+const navItem =
+  "px-4 py-2 rounded-md text-sm font-medium transition-colors hover:bg-(--color-surface-2)";
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
-
+export default function App() {
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <div className="min-h-screen flex flex-col">
+      <header className="border-b border-(--color-border) bg-(--color-surface)">
+        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-6">
+          <div className="font-semibold tracking-tight">Social Publisher</div>
+          <nav className="flex items-center gap-1">
+            <NavLink
+              to="/compose"
+              className={({ isActive }) =>
+                `${navItem} ${isActive ? "bg-(--color-surface-2) text-(--color-accent)" : "text-(--color-muted)"}`
+              }
+            >
+              Compose
+            </NavLink>
+            <NavLink
+              to="/setup"
+              className={({ isActive }) =>
+                `${navItem} ${isActive ? "bg-(--color-surface-2) text-(--color-accent)" : "text-(--color-muted)"}`
+              }
+            >
+              Setup
+            </NavLink>
+          </nav>
+          <div className="ml-auto text-xs text-(--color-muted)">
+            Credentials stay on this device
+          </div>
+        </div>
+      </header>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8">
+        <Routes>
+          <Route path="/" element={<Navigate to="/compose" replace />} />
+          <Route path="/compose" element={<Compose />} />
+          <Route path="/setup" element={<Setup />} />
+        </Routes>
+      </main>
+    </div>
   );
 }
-
-export default App;
