@@ -2,9 +2,22 @@ use crate::error::{AppError, AppResult};
 use base64::{engine::general_purpose, Engine};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tiny_http::{Header, Response, Server};
 use url::Url;
+
+static OAUTH_CANCEL: AtomicBool = AtomicBool::new(false);
+
+// Meta Threads OAuth rejects http://127.0.0.1 redirect URIs at runtime even
+// when accepted in dashboard config. Threads is routed through an in-app
+// WebView that intercepts navigation to this HTTPS placeholder URL — the page
+// never actually loads, the code is extracted from the URL before navigation.
+// Users must register this exact URL in Meta App Dashboard → Threads → Valid
+// OAuth Redirect URIs.
+pub const THREADS_WEBVIEW_REDIRECT_URI: &str =
+    "https://example.com/social-publisher-threads-oauth/";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -21,7 +34,7 @@ impl Platform {
         match self {
             Platform::Facebook => "https://www.facebook.com/v21.0/dialog/oauth",
             Platform::Instagram => "https://www.instagram.com/oauth/authorize",
-            Platform::Threads => "https://threads.net/oauth/authorize",
+            Platform::Threads => "https://www.threads.com/oauth/authorize",
             Platform::Youtube => "https://accounts.google.com/o/oauth2/v2/auth",
             Platform::Tiktok => "https://www.tiktok.com/v2/auth/authorize/",
         }
@@ -136,13 +149,19 @@ fn wait_for_callback(
     timeout: Duration,
 ) -> AppResult<String> {
     let deadline = Instant::now() + timeout;
+    let poll = Duration::from_millis(500);
     loop {
+        if OAUTH_CANCEL.load(Ordering::SeqCst) {
+            return Err(AppError::OAuth("Cancelled by user".into()));
+        }
+
         let remaining = deadline.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
             return Err(AppError::OAuth("Timed out waiting for callback".into()));
         }
 
-        let req = match server.recv_timeout(remaining) {
+        let wait = remaining.min(poll);
+        let req = match server.recv_timeout(wait) {
             Ok(Some(r)) => r,
             Ok(None) => continue,
             Err(e) => return Err(AppError::OAuth(format!("recv: {}", e))),
@@ -234,24 +253,64 @@ fn build_auth_url(platform: Platform, client_id: &str, redirect_uri: &str, state
     }
 }
 
+// Fixed port so the redirect URI is stable across launches. Developers must
+// whitelist `http://127.0.0.1:53682/callback` exactly once per platform app.
+const OAUTH_CALLBACK_PORT: u16 = 53682;
+
+#[tauri::command]
+pub fn oauth_cancel() {
+    OAUTH_CANCEL.store(true, Ordering::SeqCst);
+}
+
 #[tauri::command]
 pub async fn oauth_flow(
+    app: tauri::AppHandle,
     platform: Platform,
     client_id: String,
     client_secret: String,
 ) -> AppResult<OAuthResult> {
+    OAUTH_CANCEL.store(false, Ordering::SeqCst);
+
+    let entry_log = format!(
+        "[oauth-entry] platform={:?} client_id_len={} client_secret_len={} client_id_first10={:?}\n",
+        platform,
+        client_id.len(),
+        client_secret.len(),
+        client_id.chars().take(10).collect::<String>()
+    );
+    eprintln!("{}", entry_log);
+    let log_path = std::env::temp_dir().join("social-publisher-oauth.log");
+    let _ = std::fs::write(&log_path, &entry_log);
+
+    if client_id.trim().is_empty() {
+        return Err(AppError::OAuth("Client ID is empty".into()));
+    }
+    if client_secret.trim().is_empty() {
+        return Err(AppError::OAuth("Client Secret is empty".into()));
+    }
+
+    if matches!(platform, Platform::Threads) {
+        return oauth_flow_threads_webview(&app, client_id, client_secret).await;
+    }
+
     let state = random_state();
 
-    let server = Server::http("127.0.0.1:0")
-        .map_err(|e| AppError::OAuth(format!("listener: {}", e)))?;
-    let port = server
-        .server_addr()
-        .to_ip()
-        .ok_or_else(|| AppError::OAuth("no port".into()))?
-        .port();
-    let redirect_uri = format!("http://127.0.0.1:{}/callback", port);
+    let bind = format!("127.0.0.1:{}", OAUTH_CALLBACK_PORT);
+    let server = Server::http(&bind).map_err(|e| {
+        AppError::OAuth(format!(
+            "Cannot bind port {} — another instance or app is using it. Close it and retry. ({})",
+            OAUTH_CALLBACK_PORT, e
+        ))
+    })?;
+    let redirect_uri = format!("http://127.0.0.1:{}/callback", OAUTH_CALLBACK_PORT);
 
     let auth_url = build_auth_url(platform, &client_id, &redirect_uri, &state);
+    let debug_line = format!(
+        "{}[oauth-url] url={}\n",
+        entry_log, auth_url
+    );
+    eprintln!("[oauth-url] {}", auth_url);
+    let _ = std::fs::write(&log_path, &debug_line);
     webbrowser::open(&auth_url)
         .map_err(|e| AppError::OAuth(format!("open browser: {}", e)))?;
 
@@ -273,6 +332,155 @@ pub async fn oauth_flow(
             meta_finalize(&client, platform, &client_id, &client_secret, &redirect_uri, &code).await
         }
     }
+}
+
+async fn oauth_flow_threads_webview(
+    app: &tauri::AppHandle,
+    client_id: String,
+    client_secret: String,
+) -> AppResult<OAuthResult> {
+    let state = random_state();
+    let auth_url = build_auth_url(
+        Platform::Threads,
+        &client_id,
+        THREADS_WEBVIEW_REDIRECT_URI,
+        &state,
+    );
+
+    let log_path = std::env::temp_dir().join("social-publisher-oauth.log");
+    let log_line = format!(
+        "[oauth-threads-webview] url={}\n[oauth-threads-webview] redirect_uri={}\n",
+        auth_url, THREADS_WEBVIEW_REDIRECT_URI
+    );
+    eprintln!("{}", log_line);
+    let _ = std::fs::write(&log_path, &log_line);
+
+    let parsed_url = Url::parse(&auth_url)
+        .map_err(|e| AppError::OAuth(format!("invalid auth URL: {}", e)))?;
+
+    let captured: Arc<Mutex<Option<Result<String, String>>>> = Arc::new(Mutex::new(None));
+    let expected_prefix = THREADS_WEBVIEW_REDIRECT_URI.to_string();
+    let expected_state = state.clone();
+
+    let extract_from_url = move |url: &Url,
+                                 expected_state: &str|
+          -> Option<Result<String, String>> {
+        let mut code_val: Option<String> = None;
+        let mut state_val: Option<String> = None;
+        let mut error_val: Option<String> = None;
+        for (k, v) in url.query_pairs() {
+            match k.as_ref() {
+                "code" => code_val = Some(v.into_owned()),
+                "state" => state_val = Some(v.into_owned()),
+                "error" | "error_description" => error_val = Some(v.into_owned()),
+                _ => {}
+            }
+        }
+        if code_val.is_none() && error_val.is_none() {
+            return None;
+        }
+        Some(if let Some(err) = error_val {
+            Err(err)
+        } else if state_val.as_deref() != Some(expected_state) {
+            Err("State mismatch (CSRF guard)".into())
+        } else if let Some(code) = code_val {
+            Ok(code)
+        } else {
+            Err("Missing authorization code".into())
+        })
+    };
+
+    let captured_for_nav = captured.clone();
+    let prefix_for_nav = expected_prefix.clone();
+    let state_for_nav = expected_state.clone();
+    let extract_for_nav = extract_from_url.clone();
+
+    let captured_for_load = captured.clone();
+    let prefix_for_load = expected_prefix.clone();
+    let state_for_load = expected_state.clone();
+    let extract_for_load = extract_from_url;
+
+    let label = format!("oauth-threads-{}", rand::random::<u32>());
+    let window = tauri::WebviewWindowBuilder::new(
+        app,
+        &label,
+        tauri::WebviewUrl::External(parsed_url),
+    )
+    .title("Authorize Threads")
+    .inner_size(520.0, 760.0)
+    .on_navigation(move |nav_url| {
+        if !nav_url.as_str().starts_with(&prefix_for_nav) {
+            return true;
+        }
+        if let Some(result) = extract_for_nav(nav_url, &state_for_nav) {
+            if let Ok(mut guard) = captured_for_nav.lock() {
+                *guard = Some(result);
+            }
+        }
+        false
+    })
+    .on_page_load(move |_window, payload| {
+        let url = payload.url();
+        if !url.as_str().starts_with(&prefix_for_load) {
+            return;
+        }
+        if let Some(result) = extract_for_load(url, &state_for_load) {
+            if let Ok(mut guard) = captured_for_load.lock() {
+                if guard.is_none() {
+                    *guard = Some(result);
+                }
+            }
+        }
+    })
+    .build()
+    .map_err(|e| AppError::OAuth(format!("create webview: {}", e)))?;
+
+    let user_closed = Arc::new(AtomicBool::new(false));
+    let user_closed_clone = user_closed.clone();
+    window.on_window_event(move |event| {
+        if matches!(
+            event,
+            tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
+        ) {
+            user_closed_clone.store(true, Ordering::SeqCst);
+        }
+    });
+
+    let timeout = Duration::from_secs(300);
+    let deadline = Instant::now() + timeout;
+    let code = loop {
+        if OAUTH_CANCEL.load(Ordering::SeqCst) {
+            let _ = window.close();
+            return Err(AppError::OAuth("Cancelled by user".into()));
+        }
+        if user_closed.load(Ordering::SeqCst) {
+            return Err(AppError::OAuth("Window closed by user".into()));
+        }
+        if Instant::now() > deadline {
+            let _ = window.close();
+            return Err(AppError::OAuth("Timed out waiting for callback".into()));
+        }
+        let taken = captured.lock().ok().and_then(|mut g| g.take());
+        if let Some(r) = taken {
+            let _ = window.close();
+            break r.map_err(AppError::OAuth)?;
+        }
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    };
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(60))
+        .build()?;
+
+    meta_finalize(
+        &client,
+        Platform::Threads,
+        &client_id,
+        &client_secret,
+        THREADS_WEBVIEW_REDIRECT_URI,
+        &code,
+    )
+    .await
 }
 
 async fn meta_finalize(
@@ -602,4 +810,138 @@ pub async fn threads_resolve_user(access_token: String) -> AppResult<String> {
 
     let parsed: IgMeResponse = resp.json().await?;
     Ok(parsed.id)
+}
+
+#[derive(Deserialize)]
+struct FbMeResponse {
+    id: String,
+    #[serde(default)]
+    #[allow(dead_code)]
+    name: Option<String>,
+}
+
+#[tauri::command]
+pub async fn facebook_resolve_page(page_token: String) -> AppResult<String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()?;
+    let resp = client
+        .get("https://graph.facebook.com/v21.0/me")
+        .query(&[("fields", "id,name"), ("access_token", page_token.as_str())])
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::Api(format!("/me {}: {}", status, text)));
+    }
+
+    let parsed: FbMeResponse = resp.json().await?;
+    Ok(parsed.id)
+}
+
+#[derive(Deserialize)]
+struct DebugTokenEnvelope {
+    data: DebugTokenData,
+}
+
+#[derive(Deserialize, Default)]
+struct DebugTokenData {
+    #[serde(default)]
+    expires_at: i64,
+    #[serde(default)]
+    #[allow(dead_code)]
+    is_valid: bool,
+}
+
+async fn debug_token_at(base: &str, token: &str) -> AppResult<i64> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()?;
+    let url = format!("{}/debug_token", base);
+    let resp = client
+        .get(&url)
+        .query(&[("input_token", token), ("access_token", token)])
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::Api(format!("/debug_token {}: {}", status, text)));
+    }
+    let parsed: DebugTokenEnvelope = resp.json().await?;
+    Ok(parsed.data.expires_at)
+}
+
+#[tauri::command]
+pub async fn facebook_debug_token(token: String) -> AppResult<i64> {
+    debug_token_at("https://graph.facebook.com/v21.0", &token).await
+}
+
+#[tauri::command]
+pub async fn instagram_debug_token(token: String) -> AppResult<i64> {
+    debug_token_at("https://graph.facebook.com/v21.0", &token).await
+}
+
+#[tauri::command]
+pub async fn threads_debug_token(token: String) -> AppResult<i64> {
+    debug_token_at("https://graph.threads.net/v1.0", &token).await
+}
+
+#[derive(Deserialize)]
+struct RefreshTokenResponse {
+    access_token: String,
+    #[serde(default)]
+    expires_in: i64,
+}
+
+#[tauri::command]
+pub async fn instagram_refresh_token(access_token: String) -> AppResult<(String, i64)> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()?;
+    let resp = client
+        .get("https://graph.instagram.com/refresh_access_token")
+        .query(&[
+            ("grant_type", "ig_refresh_token"),
+            ("access_token", access_token.as_str()),
+        ])
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::Api(format!(
+            "/refresh_access_token {}: {}",
+            status, text
+        )));
+    }
+    let parsed: RefreshTokenResponse = resp.json().await?;
+    Ok((parsed.access_token, parsed.expires_in))
+}
+
+#[tauri::command]
+pub async fn threads_refresh_token(access_token: String) -> AppResult<(String, i64)> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()?;
+    let resp = client
+        .get("https://graph.threads.net/refresh_access_token")
+        .query(&[
+            ("grant_type", "th_refresh_token"),
+            ("access_token", access_token.as_str()),
+        ])
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::Api(format!(
+            "/refresh_access_token {}: {}",
+            status, text
+        )));
+    }
+    let parsed: RefreshTokenResponse = resp.json().await?;
+    Ok((parsed.access_token, parsed.expires_in))
 }

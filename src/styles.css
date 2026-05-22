@@ -7,10 +7,27 @@
   --color-border: oklch(30% 0.01 250);
   --color-text: oklch(95% 0 0);
   --color-muted: oklch(65% 0.01 250);
-  --color-accent: oklch(70% 0.18 290);
-  --color-accent-2: oklch(75% 0.15 200);
-  --color-success: oklch(72% 0.18 145);
+  --color-accent: oklch(82% 0.11 145);
+  --color-accent-2: oklch(80% 0.1 200);
+  --color-success: oklch(82% 0.11 145);
   --color-danger: oklch(65% 0.22 25);
+}
+
+:root[data-theme="light"] {
+  --color-bg: oklch(98% 0.003 250);
+  --color-surface: oklch(100% 0 0);
+  --color-surface-2: oklch(95% 0.005 250);
+  --color-border: oklch(88% 0.008 250);
+  --color-text: oklch(20% 0.01 250);
+  --color-muted: oklch(45% 0.012 250);
+  --color-accent: oklch(72% 0.12 145);
+  --color-accent-2: oklch(72% 0.1 200);
+  --color-success: oklch(72% 0.12 145);
+  --color-danger: oklch(55% 0.22 25);
+}
+
+html {
+  font-size: 18px;
 }
 
 html, body, #root {
@@ -18,6 +35,20 @@ html, body, #root {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-weight: 500;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+input, textarea, select, button {
+  font-weight: 500;
+}
+
+label {
+  font-weight: 600;
 }
 
 * {

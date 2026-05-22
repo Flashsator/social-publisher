@@ -37,21 +37,43 @@ pub async fn publish_facebook(
     image_urls: Vec<String>,
     video_url: Option<String>,
     video_path: Option<String>,
+    published: Option<bool>,
 ) -> AppResult<PublishResult> {
     let client = http_client()?;
+    let is_published = published.unwrap_or(true);
 
     let local_video = video_path.as_deref().filter(|s| !s.is_empty());
     let remote_video = video_url.as_deref().filter(|s| !s.is_empty());
 
     let raw_id = if let Some(path) = local_video {
-        post_video_local(&client, &page_id, &page_token, &text, path).await?
+        post_video_local(&client, &page_id, &page_token, &text, path, is_published).await?
     } else if let Some(url) = remote_video {
-        post_video_url(&client, &page_id, &page_token, &text, url).await?
+        post_video_url(&client, &page_id, &page_token, &text, url, is_published).await?
     } else {
         match image_urls.len() {
-            0 => post_text(&client, &page_id, &page_token, &text).await?,
-            1 => post_single_photo(&client, &page_id, &page_token, &text, &image_urls[0]).await?,
-            _ => post_multi_photo(&client, &page_id, &page_token, &text, &image_urls).await?,
+            0 => post_text(&client, &page_id, &page_token, &text, is_published).await?,
+            1 => {
+                post_single_photo(
+                    &client,
+                    &page_id,
+                    &page_token,
+                    &text,
+                    &image_urls[0],
+                    is_published,
+                )
+                .await?
+            }
+            _ => {
+                post_multi_photo(
+                    &client,
+                    &page_id,
+                    &page_token,
+                    &text,
+                    &image_urls,
+                    is_published,
+                )
+                .await?
+            }
         }
     };
 
@@ -61,12 +83,21 @@ pub async fn publish_facebook(
     })
 }
 
+fn pub_str(published: bool) -> &'static str {
+    if published {
+        "true"
+    } else {
+        "false"
+    }
+}
+
 async fn post_video_url(
     client: &reqwest::Client,
     page_id: &str,
     token: &str,
     text: &str,
     video_url: &str,
+    published: bool,
 ) -> AppResult<String> {
     let url = format!("{}/{}/videos", FB_API, page_id);
     let resp = client
@@ -74,6 +105,7 @@ async fn post_video_url(
         .form(&[
             ("file_url", video_url),
             ("description", text),
+            ("published", pub_str(published)),
             ("access_token", token),
         ])
         .send()
@@ -87,6 +119,7 @@ async fn post_video_local(
     token: &str,
     text: &str,
     video_path: &str,
+    published: bool,
 ) -> AppResult<String> {
     let bytes = tokio::fs::read(video_path).await?;
     let file_name = Path::new(video_path)
@@ -106,6 +139,7 @@ async fn post_video_local(
     let form = multipart::Form::new()
         .part("source", part)
         .text("description", text.to_string())
+        .text("published", pub_str(published).to_string())
         .text("access_token", token.to_string());
 
     let url = format!("{}/{}/videos", FB_API, page_id);
@@ -118,11 +152,16 @@ async fn post_text(
     page_id: &str,
     token: &str,
     text: &str,
+    published: bool,
 ) -> AppResult<String> {
     let url = format!("{}/{}/feed", FB_API, page_id);
     let resp = client
         .post(&url)
-        .form(&[("message", text), ("access_token", token)])
+        .form(&[
+            ("message", text),
+            ("published", pub_str(published)),
+            ("access_token", token),
+        ])
         .send()
         .await?;
     parse_id(resp).await
@@ -134,6 +173,7 @@ async fn post_single_photo(
     token: &str,
     text: &str,
     image_url: &str,
+    published: bool,
 ) -> AppResult<String> {
     let url = format!("{}/{}/photos", FB_API, page_id);
     let resp = client
@@ -141,6 +181,7 @@ async fn post_single_photo(
         .form(&[
             ("url", image_url),
             ("caption", text),
+            ("published", pub_str(published)),
             ("access_token", token),
         ])
         .send()
@@ -154,8 +195,9 @@ async fn post_multi_photo(
     token: &str,
     text: &str,
     image_urls: &[String],
+    published: bool,
 ) -> AppResult<String> {
-    // 1) Upload each photo with published=false to get a media_fbid
+    // 1) Upload each photo with published=false to get a media_fbid (carrier photos always unpublished)
     let mut media_fbids = Vec::with_capacity(image_urls.len());
     for img_url in image_urls {
         let url = format!("{}/{}/photos", FB_API, page_id);
@@ -172,7 +214,7 @@ async fn post_multi_photo(
         media_fbids.push(id);
     }
 
-    // 2) Create feed post with attached_media
+    // 2) Create feed post with attached_media; published flag controls visibility of the post itself
     let url = format!("{}/{}/feed", FB_API, page_id);
     let attached_media = serde_json::Value::Array(
         media_fbids
@@ -186,6 +228,7 @@ async fn post_multi_photo(
         .form(&[
             ("message", text),
             ("attached_media", attached_media_str.as_str()),
+            ("published", pub_str(published)),
             ("access_token", token),
         ])
         .send()

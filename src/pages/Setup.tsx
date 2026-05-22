@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { vault, oauth, type FbPage, type Platform } from "../lib/tauri";
+import { vault, oauth, cloudinary } from "../lib/tauri";
+import { useSettings } from "../lib/settings";
+import { useT } from "../lib/i18n";
 
 type CardState = {
   busy: boolean;
@@ -11,16 +13,20 @@ const card = "border border-(--color-border) bg-(--color-surface) rounded-xl p-5
 const label = "block text-xs uppercase tracking-wide text-(--color-muted) mb-1";
 const input =
   "w-full bg-(--color-bg) border border-(--color-border) rounded-md px-3 py-2 text-sm focus:outline-none focus:border-(--color-accent)";
-const btn =
-  "px-3 py-2 rounded-md bg-(--color-accent) text-black text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed";
-const btnGhost =
-  "px-3 py-2 rounded-md bg-(--color-surface-2) text-(--color-text) text-sm font-medium hover:bg-(--color-border) disabled:opacity-50";
-const pill = (ok: boolean) =>
-  `inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
+const btnConnect = (connected: boolean) =>
+  `px-3 py-2 rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+    connected
+      ? "bg-(--color-success) text-black hover:opacity-90"
+      : "bg-(--color-surface-2) text-(--color-text) hover:bg-(--color-border)"
+  }`;
+const pill = (ok: boolean, okText: string, offText: string) => ({
+  className: `inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
     ok
       ? "bg-(--color-success)/15 text-(--color-success)"
       : "bg-(--color-surface-2) text-(--color-muted)"
-  }`;
+  }`,
+  text: ok ? okText : offText,
+});
 
 function useVaultField(key: string) {
   const [value, setValue] = useState("");
@@ -45,11 +51,71 @@ function useVaultField(key: string) {
 }
 
 function StatusRow({ status, name }: { status: Record<string, boolean>; name: string }) {
+  const t = useT();
   const ok = !!status[name];
-  return <span className={pill(ok)}>{ok ? "Connected" : "Not set"}</span>;
+  const p = pill(ok, t("connected"), t("notSet"));
+  return <span className={p.className}>{p.text}</span>;
+}
+
+function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
+  const t = useT();
+  if (!expiresAt) return null;
+  if (expiresAt === "0") {
+    return <span className="text-xs text-(--color-muted)">· {t("tokenNeverExpires")}</span>;
+  }
+  const ms = Number(expiresAt);
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return <span className="text-xs text-(--color-muted)">· {t("tokenExpiryUnknown")}</span>;
+  }
+  const diffMs = ms - Date.now();
+  if (diffMs <= 0) {
+    return <span className="text-xs text-(--color-danger)">· {t("tokenExpired")}</span>;
+  }
+  const days = Math.floor(diffMs / 86400000);
+  const cls = days < 7 ? "text-(--color-danger)" : "text-(--color-muted)";
+  return (
+    <span className={`text-xs ${cls}`}>
+      · {t("tokenExpiresIn").replace("{days}", String(days))}
+    </span>
+  );
+}
+
+async function fetchExpiry(
+  fn: (token: string) => Promise<number>,
+  token: string,
+): Promise<string> {
+  try {
+    const expSec = await fn(token);
+    if (expSec <= 0) return "0";
+    return String(expSec * 1000);
+  } catch {
+    return "";
+  }
+}
+
+function useExpiryRefresh(
+  tokenValue: string,
+  tokenLoaded: boolean,
+  expiresSave: (v: string) => Promise<void>,
+  debugFn: (token: string) => Promise<number>,
+) {
+  useEffect(() => {
+    if (!tokenLoaded || !tokenValue) return;
+    let cancelled = false;
+    (async () => {
+      const fresh = await fetchExpiry(debugFn, tokenValue);
+      if (cancelled || !fresh) return;
+      await expiresSave(fresh);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tokenLoaded, tokenValue]);
 }
 
 export default function Setup() {
+  const t = useT();
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const refreshStatus = async () => {
     const list = await vault.status();
@@ -64,12 +130,11 @@ export default function Setup() {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Setup</h1>
-        <p className="text-sm text-(--color-muted)">
-          Paste your own Meta App and Cloudinary credentials. Nothing leaves your machine — every
-          value is stored in your OS keychain.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("setupTitle")}</h1>
+        <p className="text-sm text-(--color-muted)">{t("setupSub")}</p>
       </header>
+
+      <PreferencesCard />
 
       <FacebookCard status={status} refresh={refreshStatus} />
       <InstagramCard status={status} refresh={refreshStatus} />
@@ -81,6 +146,71 @@ export default function Setup() {
       <DangerZone refresh={refreshStatus} />
     </div>
   );
+}
+
+function PreferencesCard() {
+  const t = useT();
+  const { lang, theme, setLang, setTheme } = useSettings();
+  return (
+    <section className={card}>
+      <header className="flex items-center gap-3">
+        <span
+          className="inline-block w-2 h-2 rounded-full"
+          style={{ background: "var(--color-accent)" }}
+        />
+        <h2 className="text-lg font-semibold">{t("preferences")}</h2>
+      </header>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <div className={label}>{t("language")}</div>
+          <div className="inline-flex rounded-md border border-(--color-border) bg-(--color-bg) p-1">
+            <SegBtn active={lang === "zh"} onClick={() => setLang("zh")}>
+              {t("zh")}
+            </SegBtn>
+            <SegBtn active={lang === "en"} onClick={() => setLang("en")}>
+              {t("en")}
+            </SegBtn>
+          </div>
+        </div>
+        <div>
+          <div className={label}>{t("theme")}</div>
+          <div className="inline-flex rounded-md border border-(--color-border) bg-(--color-bg) p-1">
+            <SegBtn active={theme === "dark"} onClick={() => setTheme("dark")}>
+              {t("dark")}
+            </SegBtn>
+            <SegBtn active={theme === "light"} onClick={() => setTheme("light")}>
+              {t("light")}
+            </SegBtn>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
+  function SegBtn({
+    active,
+    onClick,
+    children,
+  }: {
+    active: boolean;
+    onClick: () => void;
+    children: React.ReactNode;
+  }) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`px-3 py-1.5 text-sm font-medium rounded ${
+          active
+            ? "bg-(--color-accent) text-black"
+            : "text-(--color-muted) hover:text-(--color-text)"
+        }`}
+        aria-pressed={active}
+      >
+        {children}
+      </button>
+    );
+  }
 }
 
 function CardShell({
@@ -109,6 +239,29 @@ function CardShell({
   );
 }
 
+function SecretWarning() {
+  const t = useT();
+  return (
+    <p className="text-[11px] text-(--color-danger) mt-1 leading-snug">
+      {t("secretWarning")}
+    </p>
+  );
+}
+
+function CloudinaryNote({ msg }: { msg: string }) {
+  return (
+    <div className="text-xs px-3 py-2 rounded-md bg-(--color-bg) border border-(--color-border)/70 text-(--color-muted) flex items-start gap-2">
+      <span
+        className="font-semibold shrink-0"
+        style={{ color: "#3448c5" }}
+      >
+        Cloudinary
+      </span>
+      <span className="leading-relaxed">{msg}</span>
+    </div>
+  );
+}
+
 function ErrorLine({ msg }: { msg: string | null }) {
   if (!msg) return null;
   return (
@@ -133,105 +286,65 @@ function FacebookCard({
   status: Record<string, boolean>;
   refresh: () => void;
 }) {
-  const appId = useVaultField("fb_app_id");
-  const appSecret = useVaultField("fb_app_secret");
+  const t = useT();
   const pageId = useVaultField("fb_page_id");
   const pageToken = useVaultField("fb_page_token");
-  const [pages, setPages] = useState<FbPage[]>([]);
+  const expires = useVaultField("fb_page_token_expires_at");
+  const [manualToken, setManualToken] = useState("");
   const [s, setS] = useState<CardState>({ busy: false, error: null, info: null });
+  useExpiryRefresh(pageToken.value, pageToken.loaded, expires.save, oauth.facebookDebugToken);
 
-  const connect = async () => {
+  const saveManualToken = async () => {
     setS({ busy: true, error: null, info: null });
     try {
-      if (!appId.value || !appSecret.value) throw new Error("App ID and Secret are required");
-      const result = await oauth.flow(
-        "facebook" as Platform,
-        appId.value,
-        appSecret.value
-      );
-      const list = await oauth.facebookListPages(result.access_token);
-      setPages(list);
-      setS({
-        busy: false,
-        error: null,
-        info: `Got ${list.length} Page(s) — pick the one to publish to.`,
-      });
+      const raw = manualToken.trim();
+      if (!raw) throw new Error("Token is empty");
+      const pid = await oauth.facebookResolvePage(raw);
+      await pageToken.save(raw);
+      await pageId.save(pid);
+      await expires.save(await fetchExpiry(oauth.facebookDebugToken, raw));
+      setManualToken("");
+      setS({ busy: false, error: null, info: `Saved Page ${pid}` });
+      refresh();
     } catch (e) {
       setS({ busy: false, error: String(e), info: null });
     }
   };
 
-  const choosePage = async (p: FbPage) => {
-    await pageId.save(p.id);
-    await pageToken.save(p.access_token);
-    setS({ busy: false, error: null, info: `Saved Page: ${p.name}` });
-    refresh();
-  };
-
   return (
     <CardShell
-      title="Facebook Page"
+      title={t("fbCard")}
       accent="#1877f2"
-      badge={
-        <div className="flex gap-2">
-          <StatusRow status={status} name="fb_app_id" />
-          <StatusRow status={status} name="fb_page_token" />
-        </div>
-      }
+      badge={<StatusRow status={status} name="fb_page_token" />}
     >
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={label}>App ID</label>
-          <input
-            className={input}
-            value={appId.value}
-            onChange={(e) => appId.setValue(e.currentTarget.value)}
-            onBlur={(e) => appId.save(e.currentTarget.value)}
-          />
-        </div>
-        <div>
-          <label className={label}>App Secret</label>
-          <input
-            className={input}
-            type="password"
-            value={appSecret.value}
-            onChange={(e) => appSecret.setValue(e.currentTarget.value)}
-            onBlur={(e) => appSecret.save(e.currentTarget.value)}
-          />
-        </div>
-      </div>
-
+      <p className="text-xs text-(--color-muted)">{t("fbManualHint")}</p>
+      <textarea
+        className={`${input} font-mono text-xs`}
+        rows={3}
+        placeholder={t("tokenPh")}
+        value={manualToken}
+        onChange={(e) => setManualToken(e.currentTarget.value)}
+      />
       <div className="flex items-center gap-2">
-        <button className={btn} disabled={s.busy} onClick={connect}>
-          {s.busy ? "Waiting for browser…" : "Connect via OAuth"}
+        <button
+          type="button"
+          className={btnConnect(!!status.fb_page_token)}
+          disabled={s.busy || !manualToken.trim()}
+          onClick={saveManualToken}
+        >
+          {t("thManualBtn")}
         </button>
         {pageId.value && (
           <span className="text-xs text-(--color-muted)">
-            Active Page: <span className="text-(--color-text)">{pageId.value}</span>
+            {t("activePage")}: <span className="text-(--color-text)">{pageId.value}</span>
           </span>
         )}
+        <ExpiryBadge expiresAt={expires.value} />
       </div>
-
-      {pages.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-xs text-(--color-muted)">Select a Page:</div>
-          <div className="grid grid-cols-2 gap-2">
-            {pages.map((p) => (
-              <button
-                key={p.id}
-                className={`${btnGhost} text-left`}
-                onClick={() => choosePage(p)}
-              >
-                <div className="font-medium">{p.name}</div>
-                <div className="text-xs text-(--color-muted)">{p.id}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <ErrorLine msg={s.error} />
       <InfoLine msg={s.info} />
+      <CloudinaryNote msg={t("cloudinaryWhyFb")} />
     </CardShell>
   );
 }
@@ -243,26 +356,53 @@ function InstagramCard({
   status: Record<string, boolean>;
   refresh: () => void;
 }) {
-  const appId = useVaultField("ig_app_id");
-  const appSecret = useVaultField("ig_app_secret");
+  const t = useT();
   const userId = useVaultField("ig_user_id");
   const token = useVaultField("ig_token");
   const expires = useVaultField("ig_token_expires_at");
+  const [manualToken, setManualToken] = useState("");
   const [s, setS] = useState<CardState>({ busy: false, error: null, info: null });
 
-  const connect = async () => {
+  useEffect(() => {
+    if (!token.loaded || !token.value) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [newToken, expiresIn] = await oauth.instagramRefreshToken(token.value);
+        if (cancelled) return;
+        if (newToken && newToken !== token.value) await token.save(newToken);
+        if (expiresIn > 0) await expires.save(String(Date.now() + expiresIn * 1000));
+      } catch {
+        // refresh fails for tokens < 24h old — keep existing expires
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token.loaded]);
+
+  const saveManualToken = async () => {
     setS({ busy: true, error: null, info: null });
     try {
-      if (!appId.value || !appSecret.value) throw new Error("App ID and Secret are required");
-      const r = await oauth.flow("instagram", appId.value, appSecret.value);
-      const uid = await oauth.instagramResolveUser(r.access_token);
-      await token.save(r.access_token);
+      const raw = manualToken.trim();
+      if (!raw) throw new Error("Token is empty");
+      const uid = await oauth.instagramResolveUser(raw);
       await userId.save(uid);
-      if (r.expires_in) {
-        const expAt = Date.now() + r.expires_in * 1000;
-        await expires.save(String(expAt));
+      let info = `Saved token for IG user ${uid}`;
+      try {
+        const [newToken, expiresIn] = await oauth.instagramRefreshToken(raw);
+        await token.save(newToken || raw);
+        await expires.save(String(Date.now() + expiresIn * 1000));
+        info += ` · refresh ok (${Math.floor(expiresIn / 86400)}d)`;
+      } catch (refreshErr) {
+        console.error("[IG refresh]", refreshErr);
+        await token.save(raw);
+        await expires.save(String(Date.now() + 60 * 86400000));
+        info += ` · refresh failed → 60d fallback: ${String(refreshErr).slice(0, 200)}`;
       }
-      setS({ busy: false, error: null, info: `Connected as IG user ${uid}` });
+      setManualToken("");
+      setS({ busy: false, error: null, info });
       refresh();
     } catch (e) {
       setS({ busy: false, error: String(e), info: null });
@@ -271,50 +411,38 @@ function InstagramCard({
 
   return (
     <CardShell
-      title="Instagram"
+      title={t("igCard")}
       accent="#e1306c"
-      badge={
-        <div className="flex gap-2">
-          <StatusRow status={status} name="ig_app_id" />
-          <StatusRow status={status} name="ig_token" />
-        </div>
-      }
+      badge={<StatusRow status={status} name="ig_token" />}
     >
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={label}>App ID</label>
-          <input
-            className={input}
-            value={appId.value}
-            onChange={(e) => appId.setValue(e.currentTarget.value)}
-            onBlur={(e) => appId.save(e.currentTarget.value)}
-          />
-        </div>
-        <div>
-          <label className={label}>App Secret</label>
-          <input
-            className={input}
-            type="password"
-            value={appSecret.value}
-            onChange={(e) => appSecret.setValue(e.currentTarget.value)}
-            onBlur={(e) => appSecret.save(e.currentTarget.value)}
-          />
-        </div>
-      </div>
-
+      <p className="text-xs text-(--color-muted)">{t("igManualHint")}</p>
+      <textarea
+        className={`${input} font-mono text-xs`}
+        rows={3}
+        placeholder={t("tokenPh")}
+        value={manualToken}
+        onChange={(e) => setManualToken(e.currentTarget.value)}
+      />
       <div className="flex items-center gap-2">
-        <button className={btn} disabled={s.busy} onClick={connect}>
-          {s.busy ? "Waiting for browser…" : "Connect via OAuth"}
+        <button
+          type="button"
+          className={btnConnect(!!status.ig_token)}
+          disabled={s.busy || !manualToken.trim()}
+          onClick={saveManualToken}
+        >
+          {t("thManualBtn")}
         </button>
         {userId.value && (
           <span className="text-xs text-(--color-muted)">
-            IG user: <span className="text-(--color-text)">{userId.value}</span>
+            {t("igUser")}: <span className="text-(--color-text)">{userId.value}</span>
           </span>
         )}
+        <ExpiryBadge expiresAt={expires.value} />
       </div>
 
       <ErrorLine msg={s.error} />
       <InfoLine msg={s.info} />
+      <CloudinaryNote msg={t("cloudinaryWhyIg")} />
     </CardShell>
   );
 }
@@ -326,26 +454,53 @@ function ThreadsCard({
   status: Record<string, boolean>;
   refresh: () => void;
 }) {
-  const appId = useVaultField("th_app_id");
-  const appSecret = useVaultField("th_app_secret");
+  const t = useT();
   const userId = useVaultField("th_user_id");
   const token = useVaultField("th_token");
   const expires = useVaultField("th_token_expires_at");
+  const [manualToken, setManualToken] = useState("");
   const [s, setS] = useState<CardState>({ busy: false, error: null, info: null });
 
-  const connect = async () => {
+  useEffect(() => {
+    if (!token.loaded || !token.value) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [newToken, expiresIn] = await oauth.threadsRefreshToken(token.value);
+        if (cancelled) return;
+        if (newToken && newToken !== token.value) await token.save(newToken);
+        if (expiresIn > 0) await expires.save(String(Date.now() + expiresIn * 1000));
+      } catch {
+        // refresh fails for tokens < 24h old — keep existing expires
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token.loaded]);
+
+  const saveManualToken = async () => {
     setS({ busy: true, error: null, info: null });
     try {
-      if (!appId.value || !appSecret.value) throw new Error("App ID and Secret are required");
-      const r = await oauth.flow("threads", appId.value, appSecret.value);
-      const uid = await oauth.threadsResolveUser(r.access_token);
-      await token.save(r.access_token);
+      const raw = manualToken.trim();
+      if (!raw) throw new Error("Token is empty");
+      const uid = await oauth.threadsResolveUser(raw);
       await userId.save(uid);
-      if (r.expires_in) {
-        const expAt = Date.now() + r.expires_in * 1000;
-        await expires.save(String(expAt));
+      let info = `Saved token for Threads user ${uid}`;
+      try {
+        const [newToken, expiresIn] = await oauth.threadsRefreshToken(raw);
+        await token.save(newToken || raw);
+        await expires.save(String(Date.now() + expiresIn * 1000));
+        info += ` · refresh ok (${Math.floor(expiresIn / 86400)}d)`;
+      } catch (refreshErr) {
+        console.error("[Threads refresh]", refreshErr);
+        await token.save(raw);
+        await expires.save(String(Date.now() + 60 * 86400000));
+        info += ` · refresh failed → 60d fallback: ${String(refreshErr).slice(0, 200)}`;
       }
-      setS({ busy: false, error: null, info: `Connected as Threads user ${uid}` });
+      setManualToken("");
+      setS({ busy: false, error: null, info });
       refresh();
     } catch (e) {
       setS({ busy: false, error: String(e), info: null });
@@ -354,50 +509,38 @@ function ThreadsCard({
 
   return (
     <CardShell
-      title="Threads"
+      title={t("thCard")}
       accent="#a855f7"
-      badge={
-        <div className="flex gap-2">
-          <StatusRow status={status} name="th_app_id" />
-          <StatusRow status={status} name="th_token" />
-        </div>
-      }
+      badge={<StatusRow status={status} name="th_token" />}
     >
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={label}>App ID</label>
-          <input
-            className={input}
-            value={appId.value}
-            onChange={(e) => appId.setValue(e.currentTarget.value)}
-            onBlur={(e) => appId.save(e.currentTarget.value)}
-          />
-        </div>
-        <div>
-          <label className={label}>App Secret</label>
-          <input
-            className={input}
-            type="password"
-            value={appSecret.value}
-            onChange={(e) => appSecret.setValue(e.currentTarget.value)}
-            onBlur={(e) => appSecret.save(e.currentTarget.value)}
-          />
-        </div>
-      </div>
-
+      <p className="text-xs text-(--color-muted)">{t("thManualHint")}</p>
+      <textarea
+        className={`${input} font-mono text-xs`}
+        rows={3}
+        placeholder={t("tokenPh")}
+        value={manualToken}
+        onChange={(e) => setManualToken(e.currentTarget.value)}
+      />
       <div className="flex items-center gap-2">
-        <button className={btn} disabled={s.busy} onClick={connect}>
-          {s.busy ? "Waiting for browser…" : "Connect via OAuth"}
+        <button
+          type="button"
+          className={btnConnect(!!status.th_token)}
+          disabled={s.busy || !manualToken.trim()}
+          onClick={saveManualToken}
+        >
+          {t("thManualBtn")}
         </button>
         {userId.value && (
           <span className="text-xs text-(--color-muted)">
-            Threads user: <span className="text-(--color-text)">{userId.value}</span>
+            {t("thUser")}: <span className="text-(--color-text)">{userId.value}</span>
           </span>
         )}
+        <ExpiryBadge expiresAt={expires.value} />
       </div>
 
       <ErrorLine msg={s.error} />
       <InfoLine msg={s.info} />
+      <CloudinaryNote msg={t("cloudinaryWhyTh")} />
     </CardShell>
   );
 }
@@ -409,6 +552,7 @@ function YouTubeCard({
   status: Record<string, boolean>;
   refresh: () => void;
 }) {
+  const t = useT();
   const clientId = useVaultField("yt_client_id");
   const clientSecret = useVaultField("yt_client_secret");
   const refreshToken = useVaultField("yt_refresh_token");
@@ -439,7 +583,7 @@ function YouTubeCard({
 
   return (
     <CardShell
-      title="YouTube"
+      title={t("ytCard")}
       accent="#ff0000"
       badge={
         <div className="flex gap-2">
@@ -448,15 +592,10 @@ function YouTubeCard({
         </div>
       }
     >
-      <p className="text-xs text-(--color-muted)">
-        Create OAuth credentials in Google Cloud Console with scope{" "}
-        <code>youtube.upload</code>. Add{" "}
-        <code>http://127.0.0.1/callback</code> as the authorized redirect URI (the
-        loopback port is chosen at runtime — Google accepts any port on 127.0.0.1).
-      </p>
+      <p className="text-xs text-(--color-muted)">{t("ytHint")}</p>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={label}>Client ID</label>
+          <label className={label}>{t("clientId")}</label>
           <input
             className={input}
             value={clientId.value}
@@ -465,7 +604,7 @@ function YouTubeCard({
           />
         </div>
         <div>
-          <label className={label}>Client Secret</label>
+          <label className={label}>{t("clientSecret")}</label>
           <input
             className={input}
             type="password"
@@ -473,17 +612,16 @@ function YouTubeCard({
             onChange={(e) => clientSecret.setValue(e.currentTarget.value)}
             onBlur={(e) => clientSecret.save(e.currentTarget.value)}
           />
+          <SecretWarning />
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <button className={btn} disabled={s.busy} onClick={connect}>
-          {s.busy ? "Waiting for browser…" : "Connect via OAuth"}
+        <button className={btnConnect(!!status.yt_refresh_token)} onClick={s.busy ? () => oauth.cancel() : connect}>
+          {s.busy ? t("waitingBrowser") : t("connectOAuth")}
         </button>
         {refreshToken.value && (
-          <span className="text-xs text-(--color-muted)">
-            Refresh token stored ✓
-          </span>
+          <span className="text-xs text-(--color-muted)">{t("refreshTokenStored")}</span>
         )}
       </div>
 
@@ -500,6 +638,7 @@ function TikTokCard({
   status: Record<string, boolean>;
   refresh: () => void;
 }) {
+  const t = useT();
   const clientId = useVaultField("tt_client_id");
   const clientSecret = useVaultField("tt_client_secret");
   const refreshToken = useVaultField("tt_refresh_token");
@@ -528,7 +667,7 @@ function TikTokCard({
 
   return (
     <CardShell
-      title="TikTok"
+      title={t("ttCard")}
       accent="#25f4ee"
       badge={
         <div className="flex gap-2">
@@ -537,15 +676,10 @@ function TikTokCard({
         </div>
       }
     >
-      <p className="text-xs text-(--color-muted)">
-        Register an app on the TikTok Developer Portal. Add scopes{" "}
-        <code>user.info.basic, video.upload, video.publish</code> and add{" "}
-        <code>res.cloudinary.com</code> to the URL prefix whitelist (TikTok requires
-        Cloudinary URLs to be pre-authorized for PULL_FROM_URL).
-      </p>
+      <p className="text-xs text-(--color-muted)">{t("ttHint")}</p>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={label}>Client Key</label>
+          <label className={label}>{t("clientKey")}</label>
           <input
             className={input}
             value={clientId.value}
@@ -554,7 +688,7 @@ function TikTokCard({
           />
         </div>
         <div>
-          <label className={label}>Client Secret</label>
+          <label className={label}>{t("clientSecret")}</label>
           <input
             className={input}
             type="password"
@@ -562,12 +696,13 @@ function TikTokCard({
             onChange={(e) => clientSecret.setValue(e.currentTarget.value)}
             onBlur={(e) => clientSecret.save(e.currentTarget.value)}
           />
+          <SecretWarning />
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <button className={btn} disabled={s.busy} onClick={connect}>
-          {s.busy ? "Waiting for browser…" : "Connect via OAuth"}
+        <button className={btnConnect(!!status.tt_refresh_token)} onClick={s.busy ? () => oauth.cancel() : connect}>
+          {s.busy ? t("waitingBrowser") : t("connectOAuth")}
         </button>
         {openId.value && (
           <span className="text-xs text-(--color-muted)">
@@ -578,6 +713,7 @@ function TikTokCard({
 
       <ErrorLine msg={s.error} />
       <InfoLine msg={s.info} />
+      <CloudinaryNote msg={t("cloudinaryWhyTt")} />
     </CardShell>
   );
 }
@@ -589,9 +725,11 @@ function CloudinaryCard({
   status: Record<string, boolean>;
   refresh: () => void;
 }) {
+  const t = useT();
   const cn = useVaultField("cl_cloud_name");
   const ak = useVaultField("cl_api_key");
   const as = useVaultField("cl_api_secret");
+  const [s, setS] = useState<CardState>({ busy: false, error: null, info: null });
 
   const saveAll = async () => {
     await Promise.all([
@@ -602,9 +740,31 @@ function CloudinaryCard({
     refresh();
   };
 
+  const verify = async () => {
+    setS({ busy: true, error: null, info: null });
+    try {
+      await saveAll();
+      const r = await cloudinary.verify({
+        cloudName: cn.value.trim(),
+        apiKey: ak.value.trim(),
+        apiSecret: as.value.trim(),
+      });
+      const info =
+        r.credits_used != null && r.credits_limit != null
+          ? t("cloudinaryOk")
+              .replace("{plan}", r.plan || "—")
+              .replace("{used}", r.credits_used.toFixed(2))
+              .replace("{limit}", r.credits_limit.toFixed(0))
+          : t("cloudinaryOkNoLimit").replace("{plan}", r.plan || "—");
+      setS({ busy: false, error: null, info });
+    } catch (e) {
+      setS({ busy: false, error: String(e), info: null });
+    }
+  };
+
   return (
     <CardShell
-      title="Cloudinary"
+      title={t("cloudinaryCard")}
       accent="#3448c5"
       badge={
         <div className="flex gap-2">
@@ -613,12 +773,10 @@ function CloudinaryCard({
         </div>
       }
     >
-      <p className="text-xs text-(--color-muted)">
-        Used to host images for Instagram and Threads, which require a public URL.
-      </p>
+      <p className="text-xs text-(--color-muted)">{t("cloudinaryHint")}</p>
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className={label}>Cloud name</label>
+          <label className={label}>{t("cloudName")}</label>
           <input
             className={input}
             value={cn.value}
@@ -626,7 +784,7 @@ function CloudinaryCard({
           />
         </div>
         <div>
-          <label className={label}>API key</label>
+          <label className={label}>{t("apiKey")}</label>
           <input
             className={input}
             value={ak.value}
@@ -634,26 +792,39 @@ function CloudinaryCard({
           />
         </div>
         <div>
-          <label className={label}>API secret</label>
+          <label className={label}>{t("apiSecret")}</label>
           <input
             className={input}
             type="password"
             value={as.value}
             onChange={(e) => as.setValue(e.currentTarget.value)}
           />
+          <SecretWarning />
         </div>
       </div>
-      <button className={btn} onClick={saveAll}>
-        Save Cloudinary credentials
-      </button>
+      <div className="flex items-center gap-2">
+        <button className={btnConnect(!!status.cl_api_secret)} onClick={saveAll} disabled={s.busy}>
+          {t("saveCloudinary")}
+        </button>
+        <button
+          className={btnConnect(false)}
+          onClick={verify}
+          disabled={s.busy || !cn.value.trim() || !ak.value.trim() || !as.value.trim()}
+        >
+          {s.busy ? t("verifyingCloudinary") : t("verifyCloudinary")}
+        </button>
+      </div>
+      <ErrorLine msg={s.error} />
+      <InfoLine msg={s.info} />
     </CardShell>
   );
 }
 
 function DangerZone({ refresh }: { refresh: () => void }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const wipe = async () => {
-    if (!confirm("Erase ALL stored credentials from the OS keychain?")) return;
+    if (!confirm(t("confirmWipe"))) return;
     setBusy(true);
     try {
       await vault.wipeAll();
@@ -665,17 +836,16 @@ function DangerZone({ refresh }: { refresh: () => void }) {
   };
   return (
     <section className={`${card} border-(--color-danger)/30`}>
-      <h2 className="text-lg font-semibold text-(--color-danger)">Danger zone</h2>
-      <p className="text-xs text-(--color-muted)">
-        Removes every key this app has stored from your OS keychain.
-      </p>
+      <h2 className="text-lg font-semibold text-(--color-danger)">{t("dangerZone")}</h2>
+      <p className="text-xs text-(--color-muted)">{t("dangerHint")}</p>
       <button
         className="px-3 py-2 rounded-md bg-(--color-danger) text-black text-sm font-medium disabled:opacity-50"
         disabled={busy}
         onClick={wipe}
       >
-        {busy ? "Wiping…" : "Wipe all credentials"}
+        {busy ? t("wiping") : t("wipeAll")}
       </button>
     </section>
   );
 }
+

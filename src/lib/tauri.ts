@@ -58,15 +58,34 @@ export const oauth = {
       clientId,
       clientSecret,
     }),
+  cancel: () => invoke<void>("oauth_cancel"),
   facebookListPages: (userToken: string) =>
     invoke<FbPage[]>("facebook_list_pages", { userToken }),
+  facebookResolvePage: (pageToken: string) =>
+    invoke<string>("facebook_resolve_page", { pageToken }),
   instagramResolveUser: (accessToken: string) =>
     invoke<string>("instagram_resolve_user", { accessToken }),
   threadsResolveUser: (accessToken: string) =>
     invoke<string>("threads_resolve_user", { accessToken }),
+  facebookDebugToken: (token: string) =>
+    invoke<number>("facebook_debug_token", { token }),
+  instagramDebugToken: (token: string) =>
+    invoke<number>("instagram_debug_token", { token }),
+  threadsDebugToken: (token: string) =>
+    invoke<number>("threads_debug_token", { token }),
+  instagramRefreshToken: (accessToken: string) =>
+    invoke<[string, number]>("instagram_refresh_token", { accessToken }),
+  threadsRefreshToken: (accessToken: string) =>
+    invoke<[string, number]>("threads_refresh_token", { accessToken }),
 };
 
 export type MediaKind = "image" | "video";
+
+export type CloudinaryVerifyResult = {
+  plan: string;
+  credits_used: number | null;
+  credits_limit: number | null;
+};
 
 export const cloudinary = {
   upload: (args: {
@@ -83,6 +102,26 @@ export const cloudinary = {
       filePath: args.filePath,
       kind: args.kind ?? "image",
     }),
+  verify: (args: { cloudName: string; apiKey: string; apiSecret: string }) =>
+    invoke<CloudinaryVerifyResult>("cloudinary_verify", {
+      cloudName: args.cloudName,
+      apiKey: args.apiKey,
+      apiSecret: args.apiSecret,
+    }),
+  delete: (args: {
+    cloudName: string;
+    apiKey: string;
+    apiSecret: string;
+    publicId: string;
+    kind?: MediaKind;
+  }) =>
+    invoke<void>("cloudinary_delete", {
+      cloudName: args.cloudName,
+      apiKey: args.apiKey,
+      apiSecret: args.apiSecret,
+      publicId: args.publicId,
+      kind: args.kind ?? "image",
+    }),
 };
 
 export const publish = {
@@ -93,6 +132,7 @@ export const publish = {
     imageUrls: string[];
     videoUrl?: string | null;
     videoPath?: string | null;
+    published?: boolean;
   }) =>
     invoke<PublishResult>("publish_facebook", {
       pageId: args.pageId,
@@ -101,6 +141,7 @@ export const publish = {
       imageUrls: args.imageUrls,
       videoUrl: args.videoUrl ?? null,
       videoPath: args.videoPath ?? null,
+      published: args.published ?? true,
     }),
   instagram: (args: {
     igUserId: string;
@@ -170,4 +211,59 @@ export const publish = {
       title: args.title ?? null,
       privacyLevel: args.privacyLevel ?? null,
     }),
+};
+
+export type ScheduleStatus = "pending" | "running" | "done" | "failed";
+
+export type ScheduledMedia = {
+  kind: MediaKind;
+  localPath: string;
+  remoteUrl?: string | null;
+};
+
+export type PlatformOutcome = {
+  platform: string;
+  ok: boolean;
+  message: string;
+  permalink: string | null;
+};
+
+export type ScheduledPost = {
+  id: string;
+  scheduledAt: number;
+  createdAt: number;
+  status: ScheduleStatus;
+  composeMode: "photo" | "video";
+  text: string;
+  videoTitle: string;
+  media: ScheduledMedia[];
+  platforms: Platform[];
+  postPrivacy: "public" | "private";
+  ttMode: TikTokMode;
+  ttSource: TikTokSource;
+  results: PlatformOutcome[];
+  error: string | null;
+  startedAt: number | null;
+  finishedAt: number | null;
+};
+
+export type ScheduleInput = {
+  scheduledAt: number;
+  composeMode: "photo" | "video";
+  text: string;
+  videoTitle: string;
+  media: ScheduledMedia[];
+  platforms: Platform[];
+  postPrivacy: "public" | "private";
+  ttMode: TikTokMode;
+  ttSource: TikTokSource;
+};
+
+export const schedule = {
+  list: () => invoke<ScheduledPost[]>("schedule_list"),
+  create: (input: ScheduleInput) =>
+    invoke<ScheduledPost>("schedule_create", { input }),
+  update: (id: string, input: ScheduleInput) =>
+    invoke<ScheduledPost>("schedule_update", { id, input }),
+  delete: (id: string) => invoke<void>("schedule_delete", { id }),
 };
