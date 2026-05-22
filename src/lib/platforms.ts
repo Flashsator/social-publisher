@@ -6,6 +6,7 @@ export type PlatformMeta = {
   accent: string;
   charLimit: number | null;
   requiresImage: boolean;
+  requiresVideo: boolean;
 };
 
 export const PLATFORMS: PlatformMeta[] = [
@@ -15,6 +16,7 @@ export const PLATFORMS: PlatformMeta[] = [
     accent: "#1877f2",
     charLimit: null,
     requiresImage: false,
+    requiresVideo: false,
   },
   {
     id: "instagram",
@@ -22,6 +24,7 @@ export const PLATFORMS: PlatformMeta[] = [
     accent: "#e1306c",
     charLimit: 2200,
     requiresImage: true,
+    requiresVideo: false,
   },
   {
     id: "threads",
@@ -29,6 +32,23 @@ export const PLATFORMS: PlatformMeta[] = [
     accent: "#a855f7",
     charLimit: 500,
     requiresImage: false,
+    requiresVideo: false,
+  },
+  {
+    id: "youtube",
+    label: "YouTube",
+    accent: "#ff0000",
+    charLimit: 5000,
+    requiresImage: false,
+    requiresVideo: true,
+  },
+  {
+    id: "tiktok",
+    label: "TikTok",
+    accent: "#25f4ee",
+    charLimit: 2200,
+    requiresImage: false,
+    requiresVideo: true,
   },
 ];
 

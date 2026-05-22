@@ -23,6 +23,8 @@ pub fn run() {
             platforms::facebook::publish_facebook,
             platforms::instagram::publish_instagram,
             platforms::threads::publish_threads,
+            platforms::youtube::publish_youtube,
+            platforms::tiktok::publish_tiktok,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

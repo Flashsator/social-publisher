@@ -23,11 +23,17 @@ pub async fn cloudinary_upload(
     api_key: String,
     api_secret: String,
     file_path: String,
+    kind: Option<String>,
 ) -> AppResult<UploadResult> {
     let path = Path::new(&file_path);
     if !path.exists() {
         return Err(AppError::Config(format!("File not found: {}", file_path)));
     }
+
+    let resource_type = match kind.as_deref() {
+        Some("video") => "video",
+        _ => "image",
+    };
 
     let bytes = tokio::fs::read(path).await?;
     let filename = path
@@ -63,12 +69,12 @@ pub async fn cloudinary_upload(
         .part("file", part);
 
     let url = format!(
-        "https://api.cloudinary.com/v1_1/{}/image/upload",
-        cloud_name
+        "https://api.cloudinary.com/v1_1/{}/{}/upload",
+        cloud_name, resource_type
     );
 
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
+        .timeout(std::time::Duration::from_secs(300))
         .build()?;
 
     let resp = client.post(&url).multipart(form).send().await?;

@@ -1,6 +1,8 @@
 pub mod facebook;
 pub mod instagram;
 pub mod threads;
+pub mod tiktok;
+pub mod youtube;
 
 use serde::Serialize;
 

@@ -12,6 +12,8 @@ pub enum Platform {
     Facebook,
     Instagram,
     Threads,
+    Youtube,
+    Tiktok,
 }
 
 impl Platform {
@@ -20,22 +22,8 @@ impl Platform {
             Platform::Facebook => "https://www.facebook.com/v21.0/dialog/oauth",
             Platform::Instagram => "https://www.instagram.com/oauth/authorize",
             Platform::Threads => "https://threads.net/oauth/authorize",
-        }
-    }
-
-    fn short_token_url(&self) -> &'static str {
-        match self {
-            Platform::Facebook => "https://graph.facebook.com/v21.0/oauth/access_token",
-            Platform::Instagram => "https://api.instagram.com/oauth/access_token",
-            Platform::Threads => "https://graph.threads.net/oauth/access_token",
-        }
-    }
-
-    fn long_lived_url(&self) -> &'static str {
-        match self {
-            Platform::Facebook => "https://graph.facebook.com/v21.0/oauth/access_token",
-            Platform::Instagram => "https://graph.instagram.com/access_token",
-            Platform::Threads => "https://graph.threads.net/access_token",
+            Platform::Youtube => "https://accounts.google.com/o/oauth2/v2/auth",
+            Platform::Tiktok => "https://www.tiktok.com/v2/auth/authorize/",
         }
     }
 
@@ -48,14 +36,42 @@ impl Platform {
                 "instagram_business_basic,instagram_business_content_publish"
             }
             Platform::Threads => "threads_basic,threads_content_publish",
+            Platform::Youtube => "https://www.googleapis.com/auth/youtube.upload",
+            // TikTok requires comma-separated scopes; both modes are requested up-front so the
+            // user can switch between INBOX and DIRECT_POST without re-authorizing.
+            Platform::Tiktok => "user.info.basic,video.upload,video.publish",
+        }
+    }
+}
+
+// Meta-specific URL helpers (kept private to the meta_oauth_flow path).
+mod meta_endpoints {
+    use super::Platform;
+
+    pub fn short_token_url(p: Platform) -> &'static str {
+        match p {
+            Platform::Facebook => "https://graph.facebook.com/v21.0/oauth/access_token",
+            Platform::Instagram => "https://api.instagram.com/oauth/access_token",
+            Platform::Threads => "https://graph.threads.net/oauth/access_token",
+            _ => unreachable!("not a meta platform"),
         }
     }
 
-    fn long_lived_grant(&self) -> &'static str {
-        match self {
+    pub fn long_lived_url(p: Platform) -> &'static str {
+        match p {
+            Platform::Facebook => "https://graph.facebook.com/v21.0/oauth/access_token",
+            Platform::Instagram => "https://graph.instagram.com/access_token",
+            Platform::Threads => "https://graph.threads.net/access_token",
+            _ => unreachable!("not a meta platform"),
+        }
+    }
+
+    pub fn long_lived_grant(p: Platform) -> &'static str {
+        match p {
             Platform::Facebook => "fb_exchange_token",
             Platform::Instagram => "ig_exchange_token",
             Platform::Threads => "th_exchange_token",
+            _ => unreachable!("not a meta platform"),
         }
     }
 }
@@ -65,6 +81,10 @@ pub struct OAuthResult {
     pub access_token: String,
     pub expires_in: Option<i64>,
     pub user_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refresh_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -82,6 +102,26 @@ struct LongLivedResponse {
     access_token: String,
     #[serde(default)]
     expires_in: Option<i64>,
+}
+
+#[derive(Deserialize)]
+struct GoogleTokenResponse {
+    access_token: String,
+    #[serde(default)]
+    expires_in: Option<i64>,
+    #[serde(default)]
+    refresh_token: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct TikTokTokenResponse {
+    access_token: String,
+    #[serde(default)]
+    expires_in: Option<i64>,
+    #[serde(default)]
+    refresh_token: Option<String>,
+    #[serde(default)]
+    open_id: Option<String>,
 }
 
 fn random_state() -> String {
@@ -164,6 +204,36 @@ fn wait_for_callback(
     }
 }
 
+fn build_auth_url(platform: Platform, client_id: &str, redirect_uri: &str, state: &str) -> String {
+    let scopes = platform.scopes();
+    match platform {
+        Platform::Youtube => format!(
+            "{}?client_id={}&redirect_uri={}&scope={}&response_type=code&access_type=offline&prompt=consent&state={}",
+            platform.auth_url(),
+            urlencoding::encode(client_id),
+            urlencoding::encode(redirect_uri),
+            urlencoding::encode(scopes),
+            urlencoding::encode(state),
+        ),
+        Platform::Tiktok => format!(
+            "{}?client_key={}&redirect_uri={}&scope={}&response_type=code&state={}",
+            platform.auth_url(),
+            urlencoding::encode(client_id),
+            urlencoding::encode(redirect_uri),
+            urlencoding::encode(scopes),
+            urlencoding::encode(state),
+        ),
+        _ => format!(
+            "{}?client_id={}&redirect_uri={}&scope={}&response_type=code&state={}",
+            platform.auth_url(),
+            urlencoding::encode(client_id),
+            urlencoding::encode(redirect_uri),
+            urlencoding::encode(scopes),
+            urlencoding::encode(state),
+        ),
+    }
+}
+
 #[tauri::command]
 pub async fn oauth_flow(
     platform: Platform,
@@ -181,19 +251,10 @@ pub async fn oauth_flow(
         .port();
     let redirect_uri = format!("http://127.0.0.1:{}/callback", port);
 
-    let auth_url = format!(
-        "{}?client_id={}&redirect_uri={}&scope={}&response_type=code&state={}",
-        platform.auth_url(),
-        urlencoding::encode(&client_id),
-        urlencoding::encode(&redirect_uri),
-        urlencoding::encode(platform.scopes()),
-        urlencoding::encode(&state),
-    );
-
+    let auth_url = build_auth_url(platform, &client_id, &redirect_uri, &state);
     webbrowser::open(&auth_url)
         .map_err(|e| AppError::OAuth(format!("open browser: {}", e)))?;
 
-    // Block on the listener inside a blocking task so we don't block the async runtime.
     let state_clone = state.clone();
     let code = tokio::task::spawn_blocking(move || {
         wait_for_callback(server, state_clone, Duration::from_secs(300))
@@ -201,35 +262,107 @@ pub async fn oauth_flow(
     .await
     .map_err(|e| AppError::Other(format!("join: {}", e)))??;
 
-    // 1) Exchange code -> short-lived token
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(60))
         .build()?;
 
-    let short = exchange_short_token(
-        &client,
-        platform,
-        &client_id,
-        &client_secret,
-        &redirect_uri,
-        &code,
-    )
-    .await?;
+    match platform {
+        Platform::Youtube => youtube_exchange(&client, &client_id, &client_secret, &redirect_uri, &code).await,
+        Platform::Tiktok => tiktok_exchange(&client, &client_id, &client_secret, &redirect_uri, &code).await,
+        Platform::Facebook | Platform::Instagram | Platform::Threads => {
+            meta_finalize(&client, platform, &client_id, &client_secret, &redirect_uri, &code).await
+        }
+    }
+}
 
-    // 2) Exchange short-lived -> long-lived (60d for IG/Threads, ~60d for FB)
-    let long = exchange_long_lived(&client, platform, &client_id, &client_secret, &short.access_token)
-        .await?;
-
+async fn meta_finalize(
+    client: &reqwest::Client,
+    platform: Platform,
+    client_id: &str,
+    client_secret: &str,
+    redirect_uri: &str,
+    code: &str,
+) -> AppResult<OAuthResult> {
+    let short = exchange_short_token(client, platform, client_id, client_secret, redirect_uri, code).await?;
+    let long = exchange_long_lived(client, platform, client_id, client_secret, &short.access_token).await?;
     let user_id = short.user_id.map(|v| match v {
         serde_json::Value::String(s) => s,
         serde_json::Value::Number(n) => n.to_string(),
         other => other.to_string(),
     });
-
     Ok(OAuthResult {
         access_token: long.access_token,
         expires_in: long.expires_in,
         user_id,
+        refresh_token: None,
+        open_id: None,
+    })
+}
+
+async fn youtube_exchange(
+    client: &reqwest::Client,
+    client_id: &str,
+    client_secret: &str,
+    redirect_uri: &str,
+    code: &str,
+) -> AppResult<OAuthResult> {
+    let resp = client
+        .post("https://oauth2.googleapis.com/token")
+        .form(&[
+            ("client_id", client_id),
+            ("client_secret", client_secret),
+            ("code", code),
+            ("grant_type", "authorization_code"),
+            ("redirect_uri", redirect_uri),
+        ])
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::OAuth(format!("YT token {}: {}", status, text)));
+    }
+    let parsed: GoogleTokenResponse = resp.json().await?;
+    Ok(OAuthResult {
+        access_token: parsed.access_token,
+        expires_in: parsed.expires_in,
+        user_id: None,
+        refresh_token: parsed.refresh_token,
+        open_id: None,
+    })
+}
+
+async fn tiktok_exchange(
+    client: &reqwest::Client,
+    client_key: &str,
+    client_secret: &str,
+    redirect_uri: &str,
+    code: &str,
+) -> AppResult<OAuthResult> {
+    let resp = client
+        .post("https://open.tiktokapis.com/v2/oauth/token/")
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .form(&[
+            ("client_key", client_key),
+            ("client_secret", client_secret),
+            ("code", code),
+            ("grant_type", "authorization_code"),
+            ("redirect_uri", redirect_uri),
+        ])
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::OAuth(format!("TT token {}: {}", status, text)));
+    }
+    let parsed: TikTokTokenResponse = resp.json().await?;
+    Ok(OAuthResult {
+        access_token: parsed.access_token,
+        expires_in: parsed.expires_in,
+        user_id: parsed.open_id.clone(),
+        refresh_token: parsed.refresh_token,
+        open_id: parsed.open_id,
     })
 }
 
@@ -241,10 +374,9 @@ async fn exchange_short_token(
     redirect_uri: &str,
     code: &str,
 ) -> AppResult<ShortTokenResponse> {
-    let url = platform.short_token_url();
+    let url = meta_endpoints::short_token_url(platform);
     let resp = match platform {
         Platform::Facebook => {
-            // FB uses GET with query params
             client
                 .get(url)
                 .query(&[
@@ -257,7 +389,6 @@ async fn exchange_short_token(
                 .await?
         }
         Platform::Instagram | Platform::Threads => {
-            // IG / Threads use POST form-encoded
             let params = [
                 ("client_id", client_id),
                 ("client_secret", client_secret),
@@ -267,6 +398,7 @@ async fn exchange_short_token(
             ];
             client.post(url).form(&params).send().await?
         }
+        _ => unreachable!(),
     };
 
     if !resp.status().is_success() {
@@ -286,8 +418,8 @@ async fn exchange_long_lived(
     client_secret: &str,
     short_token: &str,
 ) -> AppResult<LongLivedResponse> {
-    let url = platform.long_lived_url();
-    let grant = platform.long_lived_grant();
+    let url = meta_endpoints::long_lived_url(platform);
+    let grant = meta_endpoints::long_lived_grant(platform);
 
     let resp = match platform {
         Platform::Facebook => {
@@ -313,6 +445,7 @@ async fn exchange_long_lived(
                 .send()
                 .await?
         }
+        _ => unreachable!(),
     };
 
     if !resp.status().is_success() {
@@ -328,9 +461,60 @@ async fn exchange_long_lived(
     Ok(parsed)
 }
 
-/// After FB user-token OAuth, fetch the list of Pages the user manages
-/// (each carries its own permanent Page-scoped access token derived from the
-/// long-lived user token).
+/// Refresh helpers — callers (publish_*) use these to get a fresh access token
+/// from the stored refresh_token before uploading.
+
+pub async fn youtube_refresh_access_token(
+    client: &reqwest::Client,
+    client_id: &str,
+    client_secret: &str,
+    refresh_token: &str,
+) -> AppResult<String> {
+    let resp = client
+        .post("https://oauth2.googleapis.com/token")
+        .form(&[
+            ("client_id", client_id),
+            ("client_secret", client_secret),
+            ("refresh_token", refresh_token),
+            ("grant_type", "refresh_token"),
+        ])
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::OAuth(format!("YT refresh {}: {}", status, text)));
+    }
+    let parsed: GoogleTokenResponse = resp.json().await?;
+    Ok(parsed.access_token)
+}
+
+pub async fn tiktok_refresh_access_token(
+    client: &reqwest::Client,
+    client_key: &str,
+    client_secret: &str,
+    refresh_token: &str,
+) -> AppResult<String> {
+    let resp = client
+        .post("https://open.tiktokapis.com/v2/oauth/token/")
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .form(&[
+            ("client_key", client_key),
+            ("client_secret", client_secret),
+            ("refresh_token", refresh_token),
+            ("grant_type", "refresh_token"),
+        ])
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::OAuth(format!("TT refresh {}: {}", status, text)));
+    }
+    let parsed: TikTokTokenResponse = resp.json().await?;
+    Ok(parsed.access_token)
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct FbPage {
     pub id: String,
@@ -364,7 +548,6 @@ pub async fn facebook_list_pages(user_token: String) -> AppResult<Vec<FbPage>> {
     Ok(parsed.data)
 }
 
-/// After IG OAuth, resolve the IG user ID from the access token via /me.
 #[derive(Deserialize)]
 struct IgMeResponse {
     id: String,

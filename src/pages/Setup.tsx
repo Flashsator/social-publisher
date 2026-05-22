@@ -74,6 +74,8 @@ export default function Setup() {
       <FacebookCard status={status} refresh={refreshStatus} />
       <InstagramCard status={status} refresh={refreshStatus} />
       <ThreadsCard status={status} refresh={refreshStatus} />
+      <YouTubeCard status={status} refresh={refreshStatus} />
+      <TikTokCard status={status} refresh={refreshStatus} />
       <CloudinaryCard status={status} refresh={refreshStatus} />
 
       <DangerZone refresh={refreshStatus} />
@@ -390,6 +392,186 @@ function ThreadsCard({
         {userId.value && (
           <span className="text-xs text-(--color-muted)">
             Threads user: <span className="text-(--color-text)">{userId.value}</span>
+          </span>
+        )}
+      </div>
+
+      <ErrorLine msg={s.error} />
+      <InfoLine msg={s.info} />
+    </CardShell>
+  );
+}
+
+function YouTubeCard({
+  status,
+  refresh,
+}: {
+  status: Record<string, boolean>;
+  refresh: () => void;
+}) {
+  const clientId = useVaultField("yt_client_id");
+  const clientSecret = useVaultField("yt_client_secret");
+  const refreshToken = useVaultField("yt_refresh_token");
+  const [s, setS] = useState<CardState>({ busy: false, error: null, info: null });
+
+  const connect = async () => {
+    setS({ busy: true, error: null, info: null });
+    try {
+      if (!clientId.value || !clientSecret.value)
+        throw new Error("Client ID and Secret are required");
+      const r = await oauth.flow("youtube", clientId.value, clientSecret.value);
+      if (!r.refresh_token) {
+        throw new Error(
+          "Google returned no refresh_token. Make sure the OAuth consent screen has been re-approved (revoke prior access in your Google account and reconnect)."
+        );
+      }
+      await refreshToken.save(r.refresh_token);
+      setS({
+        busy: false,
+        error: null,
+        info: "Connected — refresh token saved.",
+      });
+      refresh();
+    } catch (e) {
+      setS({ busy: false, error: String(e), info: null });
+    }
+  };
+
+  return (
+    <CardShell
+      title="YouTube"
+      accent="#ff0000"
+      badge={
+        <div className="flex gap-2">
+          <StatusRow status={status} name="yt_client_id" />
+          <StatusRow status={status} name="yt_refresh_token" />
+        </div>
+      }
+    >
+      <p className="text-xs text-(--color-muted)">
+        Create OAuth credentials in Google Cloud Console with scope{" "}
+        <code>youtube.upload</code>. Add{" "}
+        <code>http://127.0.0.1/callback</code> as the authorized redirect URI (the
+        loopback port is chosen at runtime — Google accepts any port on 127.0.0.1).
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={label}>Client ID</label>
+          <input
+            className={input}
+            value={clientId.value}
+            onChange={(e) => clientId.setValue(e.currentTarget.value)}
+            onBlur={(e) => clientId.save(e.currentTarget.value)}
+          />
+        </div>
+        <div>
+          <label className={label}>Client Secret</label>
+          <input
+            className={input}
+            type="password"
+            value={clientSecret.value}
+            onChange={(e) => clientSecret.setValue(e.currentTarget.value)}
+            onBlur={(e) => clientSecret.save(e.currentTarget.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button className={btn} disabled={s.busy} onClick={connect}>
+          {s.busy ? "Waiting for browser…" : "Connect via OAuth"}
+        </button>
+        {refreshToken.value && (
+          <span className="text-xs text-(--color-muted)">
+            Refresh token stored ✓
+          </span>
+        )}
+      </div>
+
+      <ErrorLine msg={s.error} />
+      <InfoLine msg={s.info} />
+    </CardShell>
+  );
+}
+
+function TikTokCard({
+  status,
+  refresh,
+}: {
+  status: Record<string, boolean>;
+  refresh: () => void;
+}) {
+  const clientId = useVaultField("tt_client_id");
+  const clientSecret = useVaultField("tt_client_secret");
+  const refreshToken = useVaultField("tt_refresh_token");
+  const openId = useVaultField("tt_open_id");
+  const [s, setS] = useState<CardState>({ busy: false, error: null, info: null });
+
+  const connect = async () => {
+    setS({ busy: true, error: null, info: null });
+    try {
+      if (!clientId.value || !clientSecret.value)
+        throw new Error("Client Key and Secret are required");
+      const r = await oauth.flow("tiktok", clientId.value, clientSecret.value);
+      if (!r.refresh_token) throw new Error("TikTok returned no refresh_token");
+      await refreshToken.save(r.refresh_token);
+      if (r.open_id) await openId.save(r.open_id);
+      setS({
+        busy: false,
+        error: null,
+        info: `Connected${r.open_id ? ` as ${r.open_id}` : ""}.`,
+      });
+      refresh();
+    } catch (e) {
+      setS({ busy: false, error: String(e), info: null });
+    }
+  };
+
+  return (
+    <CardShell
+      title="TikTok"
+      accent="#25f4ee"
+      badge={
+        <div className="flex gap-2">
+          <StatusRow status={status} name="tt_client_id" />
+          <StatusRow status={status} name="tt_refresh_token" />
+        </div>
+      }
+    >
+      <p className="text-xs text-(--color-muted)">
+        Register an app on the TikTok Developer Portal. Add scopes{" "}
+        <code>user.info.basic, video.upload, video.publish</code> and add{" "}
+        <code>res.cloudinary.com</code> to the URL prefix whitelist (TikTok requires
+        Cloudinary URLs to be pre-authorized for PULL_FROM_URL).
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={label}>Client Key</label>
+          <input
+            className={input}
+            value={clientId.value}
+            onChange={(e) => clientId.setValue(e.currentTarget.value)}
+            onBlur={(e) => clientId.save(e.currentTarget.value)}
+          />
+        </div>
+        <div>
+          <label className={label}>Client Secret</label>
+          <input
+            className={input}
+            type="password"
+            value={clientSecret.value}
+            onChange={(e) => clientSecret.setValue(e.currentTarget.value)}
+            onBlur={(e) => clientSecret.save(e.currentTarget.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button className={btn} disabled={s.busy} onClick={connect}>
+          {s.busy ? "Waiting for browser…" : "Connect via OAuth"}
+        </button>
+        {openId.value && (
+          <span className="text-xs text-(--color-muted)">
+            open_id: <span className="text-(--color-text)">{openId.value}</span>
           </span>
         )}
       </div>

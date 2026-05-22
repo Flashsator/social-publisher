@@ -31,6 +31,7 @@ pub async fn publish_threads(
     access_token: String,
     text: String,
     image_urls: Vec<String>,
+    video_url: Option<String>,
 ) -> AppResult<PublishResult> {
     let char_count = text.chars().count();
     if char_count > TEXT_LIMIT {
@@ -40,20 +41,27 @@ pub async fn publish_threads(
         )));
     }
 
+    let video = video_url.as_deref().filter(|s| !s.is_empty());
     let client = http_client()?;
-    let container_id = match image_urls.len() {
-        0 => create_text_container(&client, &th_user_id, &access_token, &text).await?,
-        1 => create_image_container(
-            &client,
-            &th_user_id,
-            &access_token,
-            &text,
-            &image_urls[0],
-            false,
-        )
-        .await?,
-        _ => create_carousel_container(&client, &th_user_id, &access_token, &text, &image_urls)
+    let container_id = if let Some(v) = video {
+        create_video_container(&client, &th_user_id, &access_token, &text, v).await?
+    } else {
+        match image_urls.len() {
+            0 => create_text_container(&client, &th_user_id, &access_token, &text).await?,
+            1 => create_image_container(
+                &client,
+                &th_user_id,
+                &access_token,
+                &text,
+                &image_urls[0],
+                false,
+            )
             .await?,
+            _ => {
+                create_carousel_container(&client, &th_user_id, &access_token, &text, &image_urls)
+                    .await?
+            }
+        }
     };
 
     wait_until_finished(&client, &container_id, &access_token).await?;
@@ -63,6 +71,26 @@ pub async fn publish_threads(
         post_id,
         permalink: None,
     })
+}
+
+async fn create_video_container(
+    client: &reqwest::Client,
+    user_id: &str,
+    token: &str,
+    text: &str,
+    video_url: &str,
+) -> AppResult<String> {
+    let url = format!("{}/{}/threads", TH_API, user_id);
+    let mut form: Vec<(&str, &str)> = vec![
+        ("media_type", "VIDEO"),
+        ("video_url", video_url),
+        ("access_token", token),
+    ];
+    if !text.is_empty() {
+        form.push(("text", text));
+    }
+    let resp = client.post(&url).form(&form).send().await?;
+    parse_id_response(resp, "video container").await
 }
 
 async fn create_text_container(

@@ -30,15 +30,19 @@ pub async fn publish_instagram(
     access_token: String,
     text: String,
     image_urls: Vec<String>,
+    video_url: Option<String>,
 ) -> AppResult<PublishResult> {
-    if image_urls.is_empty() {
+    let video = video_url.as_deref().filter(|s| !s.is_empty());
+    if video.is_none() && image_urls.is_empty() {
         return Err(AppError::Config(
-            "Instagram requires at least one image; text-only is not supported".into(),
+            "Instagram requires at least one image or one video".into(),
         ));
     }
 
     let client = http_client()?;
-    let container_id = if image_urls.len() == 1 {
+    let container_id = if let Some(v) = video {
+        create_reels_container(&client, &ig_user_id, &access_token, &text, v).await?
+    } else if image_urls.len() == 1 {
         create_single_container(&client, &ig_user_id, &access_token, &text, &image_urls[0])
             .await?
     } else {
@@ -52,6 +56,27 @@ pub async fn publish_instagram(
         post_id,
         permalink: None,
     })
+}
+
+async fn create_reels_container(
+    client: &reqwest::Client,
+    ig_user_id: &str,
+    token: &str,
+    caption: &str,
+    video_url: &str,
+) -> AppResult<String> {
+    let url = format!("{}/{}/media", IG_API, ig_user_id);
+    let resp = client
+        .post(&url)
+        .form(&[
+            ("media_type", "REELS"),
+            ("video_url", video_url),
+            ("caption", caption),
+            ("access_token", token),
+        ])
+        .send()
+        .await?;
+    parse_id_response(resp, "reels").await
 }
 
 async fn create_single_container(
