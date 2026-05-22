@@ -16,6 +16,7 @@ export const dict = {
     helpCan: "可以做什麼",
     helpWatch: "要注意",
     helpNeedCl: "需要 Cloudinary",
+    helpDonate: "小額贊助",
 
     // preferences
     preferences: "偏好設定",
@@ -184,6 +185,7 @@ export const dict = {
     helpCan: "What you can do",
     helpWatch: "Watch out for",
     helpNeedCl: "Needs Cloudinary",
+    helpDonate: "Buy me a coffee",
 
     preferences: "Preferences",
     language: "Language",

@@ -57,6 +57,12 @@ export default function App() {
             >
               {t("navHelp")}
             </NavLink>
+            <button
+              type="button"
+              className={`${navItem} bg-(--color-accent) text-black hover:opacity-90`}
+            >
+              {t("helpDonate")}
+            </button>
           </nav>
           <div className="ml-auto text-xs text-(--color-muted)">
             {t("credentialsHint")}
