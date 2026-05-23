@@ -281,6 +281,7 @@ function InfoLine({ msg }: { msg: string | null }) {
   );
 }
 
+// @ts-expect-error preserved for future re-enable; UI usage is commented out
 function FacebookCard({
   status,
   refresh,
