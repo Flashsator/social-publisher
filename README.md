@@ -68,7 +68,7 @@ npm run tauri build    # 編出對應平台 release 安裝檔
 2. **逐一連線你要用的平台**(IG / Threads / YouTube / Cloudinary)— 每張卡片內有提示文字告訴你去哪個開發者後台拿憑證
 3. **去「發布」頁**,選圖文或影片模式,填內容,勾平台,按「發布」
 
-詳細教學:[USAGE.md](USAGE.md) (Markdown) 或 [USAGE.html](USAGE.html) (可直接用瀏覽器開)
+詳細教學:[USAGE.md](USAGE.md)(在 GitHub 上直接看)或 [USAGE.html(美化版)](https://htmlpreview.github.io/?https://github.com/Flashsator/social-publisher/blob/main/USAGE.html)
 
 ---
 

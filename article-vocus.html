@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>我做了一個免費開源的桌機發文工具,把 IG、Threads、YouTube 一鍵搞定</title>
+<title>一個免費的桌機 App,讓你一次發 IG、Threads、YouTube,不用再切來切去</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -45,7 +45,7 @@
     color: var(--text);
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
       "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-    line-height: 1.85;
+    line-height: 1.9;
     font-size: 17px;
     letter-spacing: 0.01em;
   }
@@ -62,46 +62,37 @@
     margin-bottom: 14px;
   }
   h1 {
-    font-size: 36px;
-    line-height: 1.25;
+    font-size: 34px;
+    line-height: 1.3;
     letter-spacing: -0.02em;
-    margin: 0 0 16px;
+    margin: 0 0 20px;
     font-weight: 800;
   }
   .lead {
     font-size: 19px;
     color: var(--muted);
     margin: 0 0 40px;
-    line-height: 1.7;
+    line-height: 1.75;
   }
   h2 {
     font-size: 24px;
-    line-height: 1.35;
+    line-height: 1.4;
     letter-spacing: -0.01em;
-    margin: 56px 0 16px;
+    margin: 64px 0 18px;
     font-weight: 700;
   }
   h3 {
     font-size: 18px;
-    margin: 36px 0 10px;
+    margin: 36px 0 12px;
     font-weight: 700;
   }
-  p { margin: 0 0 18px; }
-  strong { color: var(--text); }
-  blockquote {
-    margin: 24px 0;
-    padding: 4px 0 4px 20px;
-    border-left: 3px solid var(--accent);
-    color: var(--text);
-    font-style: italic;
-    font-size: 18px;
-  }
-  blockquote p:last-child { margin-bottom: 0; }
+  p { margin: 0 0 20px; }
+  strong { color: var(--text); font-weight: 700; }
   ul, ol {
     padding-left: 24px;
-    margin: 0 0 20px;
+    margin: 0 0 22px;
   }
-  li { margin-bottom: 8px; }
+  li { margin-bottom: 10px; }
   code {
     background: var(--code-bg);
     padding: 2px 7px;
@@ -112,7 +103,7 @@
   hr {
     border: 0;
     border-top: 1px solid var(--border);
-    margin: 48px auto;
+    margin: 56px auto;
     max-width: 80px;
   }
   .callout {
@@ -164,30 +155,38 @@
   .cta {
     display: inline-block;
     margin: 12px 0;
-    padding: 12px 22px;
+    padding: 14px 26px;
     border-radius: 999px;
     background: var(--accent);
     color: #fff;
     font-weight: 600;
     text-decoration: none;
     border: 0;
+    font-size: 16px;
   }
   .cta:hover { opacity: 0.92; border: 0; }
   .img-placeholder {
-    margin: 24px 0;
-    padding: 60px 20px;
+    margin: 32px 0;
+    padding: 80px 20px;
     border: 2px dashed var(--border);
     border-radius: 12px;
     text-align: center;
     color: var(--muted);
     font-size: 14px;
     background: var(--surface);
+    line-height: 1.6;
+  }
+  .img-placeholder strong {
+    display: block;
+    color: var(--text);
+    font-size: 15px;
+    margin-bottom: 4px;
   }
   .tag-row {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin: 0 0 32px;
+    margin: 0 0 40px;
   }
   .tag {
     font-size: 13px;
@@ -196,6 +195,41 @@
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--muted);
+  }
+  .step {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    margin: 24px 0;
+    padding: 20px;
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .step-body { flex: 1; }
+  .step-body h4 {
+    margin: 4px 0 6px;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .step-body p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.7;
   }
   .author {
     display: flex;
@@ -212,280 +246,250 @@
     color: var(--muted);
     margin-top: 8px;
   }
+  .center { text-align: center; }
 </style>
 </head>
 <body>
 <article class="article">
 
-  <div class="eyebrow">獨立開發 · 開源工具</div>
+  <div class="eyebrow">獨立開發 · 完全免費</div>
 
-  <h1>我把 IG、Threads、YouTube 的發文流程,塞進一個免費桌機 App 裡</h1>
+  <h1>一個免費的桌機 App,讓你一次發 IG、Threads、YouTube</h1>
 
   <p class="lead">
-    每次想同時發 IG + Threads + YouTube,就要切三個 App、複製貼上三次、上傳三遍。市面上的工具不是月費爆貴,就是要把你的 token 交給某個雲端後端。所以我自己寫了一個,程式碼開源、完全免費、所有憑證只存在你電腦裡。
+    每天打開三個 App、貼三次文字、上傳三次圖片,你不累嗎?<br>
+    這支工具讓你打字一次、選圖一次、按一下,三個平台同時上稿。
   </p>
 
   <div class="tag-row">
     <span class="tag">自媒體</span>
-    <span class="tag">獨立開發</span>
-    <span class="tag">Tauri</span>
+    <span class="tag">省時間</span>
     <span class="tag">免費工具</span>
-    <span class="tag">Open Source</span>
+    <span class="tag">Windows</span>
+    <span class="tag">開源</span>
   </div>
-
-  <h2>為什麼又要做一個發文工具?</h2>
-
-  <p>
-    現在的市場上,跨平台發文工具不是沒有。Buffer、Hootsuite、Later、SocialBee… 但它們有一個共同點:<strong>你要把社群帳號的存取權交給他們的伺服器,然後每個月付錢</strong>。
-  </p>
-
-  <p>
-    對品牌行銷團隊來說,這沒問題。但對「一個人經營兩三個社群帳號」的個人創作者來說,這個交易很不划算:
-  </p>
-
-  <ul>
-    <li>每月 $15 ~ $99 美元的訂閱費,只為了省下 30 秒的複製貼上</li>
-    <li>你的 API token 存在一個你不認識的雲端伺服器上,出事誰賠?</li>
-    <li>免費版幾乎都只給 IG 一個帳號,要多帳號就要升級</li>
-    <li>對方倒了、被買走、改條款 — 你的自動化就斷了</li>
-  </ul>
-
-  <p>
-    所以我做了一個相反方向的東西:<strong>純桌機程式,你的電腦就是後端,憑證存在 Windows 自己的金鑰庫,沒有任何雲端帳號要註冊</strong>。發文時直接從你的電腦呼叫 Meta、Google 的官方 API,中間不經過第三方。
-  </p>
-
-  <div class="callout">
-    <p><strong>專案名稱:</strong>Social Publisher</p>
-    <p><strong>GitHub:</strong><a href="https://github.com/Flashsator/social-publisher" target="_blank" rel="noopener">github.com/Flashsator/social-publisher</a></p>
-    <p><strong>授權:</strong>MIT(完全開源,可以拿去改、拿去用)</p>
-    <p><strong>平台:</strong>Windows 10/11 x64(Mac/Linux 之後再說)</p>
-    <p><strong>價格:</strong>$0 / 永遠免費</p>
-  </div>
-
-  <h2>它能做什麼</h2>
-
-  <h3>1. 同時發到多個平台</h3>
-
-  <p>
-    打一次字、選一次圖,勾選要發的平台,按發布。剩下交給程式:
-  </p>
-
-  <ul>
-    <li><strong>Instagram</strong> — 單圖、輪播(最多 10 張)、Reels 短影音</li>
-    <li><strong>Threads</strong> — 純文字、圖片、影片、輪播</li>
-    <li><strong>YouTube</strong> — 影片上傳,可設標題、描述、公開/不公開/私人</li>
-  </ul>
-
-  <p>每個平台的 API 規則不一樣(IG 圖片要公開 URL、YouTube 要從本機上傳…),這些細節程式會幫你處理。</p>
 
   <div class="img-placeholder">
-    [這裡建議放發文頁的截圖,顯示多平台勾選 + 圖片預覽]
+    <strong>📸 主視覺圖位置</strong>
+    建議放 App 主畫面的截圖,或是「IG / Threads / YouTube」三個 logo 並排的示意圖
   </div>
 
-  <h3>2. 排程發文</h3>
+  <h2>你有沒有過這種感覺?</h2>
 
   <p>
-    設未來時間,排程到了會自動發。最常用的情境是:晚上一次規劃好下週的所有貼文,週一到週五自動發。
+    寫好一篇想分享的內容,要發到 IG。
   </p>
-
-  <div class="callout warn">
-    <p><strong>⚠ 排程的真實限制要先講清楚:</strong></p>
-    <p>因為這是純本地工具,沒有雲端代你發文。所以:</p>
-    <ul>
-      <li>排程到時,你的電腦必須開機 + App 在跑(可以最小化到系統匣)</li>
-      <li>排程的圖片/影片不能移動、改名、刪除,不然到時找不到檔案</li>
-    </ul>
-    <p>這是跟 SaaS 工具最大的差別。如果你的需求是「我關電腦也要能發文」,那這套不適合你。</p>
-  </div>
-
-  <h3>3. 憑證 100% 留在你電腦</h3>
-
   <p>
-    所有 API token、App Secret 都直接存在 Windows Credential Manager(macOS 對應 Keychain、Linux 對應 Secret Service)。這是 OS 內建的安全儲存空間,跟 Chrome 存密碼是同一個機制。
+    然後切到 Threads 再貼一次。
+  </p>
+  <p>
+    順便剪一段影片發到 YouTube。
+  </p>
+  <p>
+    同一張圖,選了三次。同一段文字,複製貼上三次。<strong>明明就是同一篇,卻要做三遍。</strong>
   </p>
 
   <p>
-    程式本身<strong>不連任何後端伺服器</strong>。打開網路監控你會看到:
+    市面上不是沒有解法 ─ Buffer、Hootsuite、Later 都能跨平台發文。但你打開定價頁一看:
   </p>
 
   <ul>
-    <li>連線到 <code>graph.instagram.com</code> / <code>graph.threads.net</code>(IG / Threads API)</li>
-    <li>連線到 <code>googleapis.com</code>(YouTube API)</li>
-    <li>連線到 <code>api.cloudinary.com</code>(你自己的 Cloudinary 帳號,中轉媒體用)</li>
+    <li>免費版只給 1 個帳號,連 IG + Threads 都不能一起綁</li>
+    <li>付費版一個月 15~99 美金,只為了省 30 秒複製貼上</li>
+    <li>而且你要把帳號的登入權限交給他們的伺服器保管</li>
   </ul>
 
-  <p>沒了。沒有任何「往我的伺服器送 telemetry」的請求,因為根本沒有我的伺服器。</p>
-
-  <h3>4. Token 自動續命</h3>
-
   <p>
-    IG / Threads 的長效 token 預設 60 天會過期,要手動 refresh。這個程式會在你每次開啟 App 時自動偷偷做 refresh,只要你別斷線超過 60 天,token 就會一直續下去,你不用管。
+    付月費也就算了,你的帳號 token 存在別人公司伺服器,哪天他們被駭、倒閉、改條款,你的自動化就斷了。
   </p>
 
-  <h3>5. 自動媒體中轉</h3>
+  <h2>所以我做了一個相反的東西</h2>
 
   <p>
-    IG 跟 Threads 的官方 API 不接受你本機檔案,只接受公開 URL。所以發圖文時,程式會:
+    <strong>Social Publisher</strong> 是一個直接裝在你 Windows 電腦上的桌機 App。
   </p>
 
-  <ol>
-    <li>自動把你選的圖/影片上傳到你自己的 Cloudinary 帳號(免費方案完全夠用)</li>
-    <li>用拿到的公開 URL 呼叫 IG / Threads API</li>
-    <li>不論成功或失敗,<strong>立刻把剛上傳的檔案從 Cloudinary 刪掉</strong></li>
-  </ol>
+  <p>沒有月費。沒有雲端帳號。憑證只存在你自己電腦的密碼管理員裡(跟 Chrome 幫你記密碼是同個地方)。</p>
 
-  <p>所以你的 Cloudinary 額度永遠不會累積。發完即焚。</p>
-
-  <h2>誰適合用?</h2>
-
-  <p>誠實地說,這套工具有適合跟不適合的人:</p>
+  <p>你發文的時候,程式直接從你的電腦呼叫 IG、Threads、YouTube 官方,中間沒有任何別人的伺服器。</p>
 
   <div class="callout ok">
-    <p><strong>✓ 適合你如果你是:</strong></p>
+    <p><strong>一句話總結:</strong></p>
+    <p>把市面上要付錢的跨平台發文工具,做成免費裝在自己電腦的版本。資料 100% 在自己手上。</p>
+  </div>
+
+  <div class="img-placeholder">
+    <strong>📸 圖位置:App 整體畫面</strong>
+    建議放 App 開啟後的完整截圖,展示左側分頁(設定 / 發布 / 排程 / 說明)
+  </div>
+
+  <h2>它能幫你做什麼</h2>
+
+  <h3>一次發到三個平台</h3>
+
+  <p>
+    打開 App,選「圖文」或「影片」模式,把文案打進去,把圖或影片拖進去,勾要發的平台,按發布。
+  </p>
+
+  <p>結束。三個平台同時上稿。</p>
+
+  <div class="img-placeholder">
+    <strong>📸 圖位置:發文頁面截圖</strong>
+    建議放「發布」頁的截圖,讓人看到平台勾選 checkbox 跟圖片預覽
+  </div>
+
+  <h3>排程未來發文</h3>
+
+  <p>
+    晚上有靈感,想規劃接下來一週的貼文?選好日期時間,程式時間到了會自動發。
+  </p>
+
+  <p>
+    免費版本沒有「上限幾則」的限制。你想排 100 則排 100 則。
+  </p>
+
+  <div class="callout warn">
+    <p><strong>⚠ 但有一個誠實的限制要先講:</strong></p>
+    <p>因為這是免費的桌機程式,不是雲端服務,所以排程到的時間點,<strong>你的電腦必須開機,App 也要在跑</strong>(可以最小化到工作列右下角)。</p>
+    <p>如果你的需求是「我關電腦也要能發文」,那要找付費的雲端 SaaS。但如果你的電腦本來就一直開著,這完全不是問題。</p>
+  </div>
+
+  <h3>密碼跟憑證都鎖在自己電腦</h3>
+
+  <p>
+    所有 IG / Threads / YouTube 的登入授權,都直接存進 Windows 自己的「認證管理員」。這是微軟內建、跟 Chrome 存密碼同一個機制的安全儲存空間。
+  </p>
+
+  <p>
+    程式本身<strong>不會連任何陌生的伺服器</strong>。你打開網路監控可以驗證:它只會連到 IG、Threads、YouTube 三家官方的網址,以及你自己的圖片中轉服務 Cloudinary(下面會解釋)。
+  </p>
+
+  <h3>圖片自動中轉、自動清空</h3>
+
+  <p>
+    這部分稍微技術一點,但你不用記細節 ─ 只需要知道:
+  </p>
+
+  <ul>
+    <li>IG 跟 Threads 的官方規則不接受你直接上傳檔案,只接受「網路上的圖片連結」</li>
+    <li>所以程式會自動幫你把圖丟到 <strong>Cloudinary</strong>(免費的圖床)</li>
+    <li>發完之後,<strong>立刻把圖從 Cloudinary 刪掉</strong></li>
+  </ul>
+
+  <p>你的 Cloudinary 免費額度永遠不會被吃光,因為發完即焚。整個過程你完全不用手動操作。</p>
+
+  <h2>這套適合誰用?</h2>
+
+  <div class="callout ok">
+    <p><strong>✓ 適合你,如果:</strong></p>
     <ul>
-      <li>單兵作戰的自媒體創作者,經營自己的 IG / Threads / YouTube</li>
-      <li>不想為了一個簡單需求付月費,寧可花時間自己設定一次</li>
-      <li>對「我的 token 被誰拿著」這件事在意</li>
-      <li>每天電腦本來就會開,排程半夜發文也沒差</li>
-      <li>願意自己去 Meta / Google 開發者後台申請 App(只要一次)</li>
+      <li>你經營自己的社群,IG + Threads + YouTube 至少兩個</li>
+      <li>不想為了省 30 秒貼文付月費</li>
+      <li>在意「我的帳號 token 被誰拿著」</li>
+      <li>電腦本來就常開著</li>
+      <li>願意花 30 分鐘做一次設定(只要做一次,以後永遠不用再弄)</li>
     </ul>
   </div>
 
   <div class="callout warn">
-    <p><strong>✗ 不適合你如果:</strong></p>
+    <p><strong>✗ 不適合你,如果:</strong></p>
     <ul>
-      <li>需要管理客戶的數十個帳號(請用 Buffer / Hootsuite)</li>
-      <li>你的工作流程是手機操作,電腦不常開</li>
-      <li>不想碰任何技術設定(雖然只要一次,但要 30 分鐘左右)</li>
-      <li>需要 TikTok(目前因為平台政策還沒實作)</li>
+      <li>你要管理客戶的幾十個帳號(請用 Buffer / Hootsuite)</li>
+      <li>你主要用手機,電腦不常開</li>
+      <li>完全不想碰任何技術設定</li>
+      <li>你需要發 TikTok(目前因為平台政策還沒實作)</li>
     </ul>
   </div>
 
-  <h2>快速上手</h2>
+  <h2>三步驟開始用</h2>
 
-  <h3>Step 1 · 下載</h3>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h4>下載安裝</h4>
+      <p>到 GitHub Release 頁下載安裝包(<code>setup.exe</code>),或下載免安裝版(<code>portable.zip</code>)解壓即用。</p>
+    </div>
+  </div>
 
-  <p>
-    到 GitHub Release 頁下載,有三種版本:
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h4>申請一次帳號(約 30 分鐘)</h4>
+      <p>到 Meta、Google、Cloudinary 三個地方各申請一組免費的開發者帳號,把 ID 跟密鑰貼進 App 裡。App 內每個欄位都有提示告訴你「去哪裡拿」,跟著做就好。一輩子只要做這一次。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h4>開始發文</h4>
+      <p>打字、選圖、勾平台、按發布。以後每次都是這四個動作。</p>
+    </div>
+  </div>
+
+  <div class="img-placeholder">
+    <strong>📸 圖位置:設定頁截圖</strong>
+    建議放「設定」頁的截圖,展示 IG / Threads / YouTube / Cloudinary 四張卡片
+  </div>
+
+  <p class="center">
+    <a class="cta" href="https://github.com/Flashsator/social-publisher/releases" target="_blank" rel="noopener">前往 GitHub 下載 →</a>
   </p>
 
-  <ul>
-    <li><strong>setup.exe</strong> — 標準安裝包,新手選這個</li>
-    <li><strong>.msi</strong> — 企業環境用</li>
-    <li><strong>portable.zip</strong> — 免安裝可攜版,解壓後直接執行</li>
-  </ul>
-
-  <p><a class="cta" href="https://github.com/Flashsator/social-publisher/releases" target="_blank" rel="noopener">前往下載 →</a></p>
-
-  <p class="footnote">
-    第一次執行 Windows 會跳 SmartScreen 警告(因為沒簽 code-signing 憑證,簽一張要 USD 99/年起跳,獨立開發者不太可能花這個錢)。點「更多資訊」→「仍要執行」即可。
-  </p>
-
-  <h3>Step 2 · 申請憑證</h3>
-
-  <p>這是最花時間的部分,但<strong>一輩子只要做一次</strong>:</p>
-
-  <table>
-    <thead>
-      <tr><th>平台</th><th>你要拿到的</th><th>大約耗時</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Meta App<br>(IG + Threads 共用)</td>
-        <td>App ID + App Secret,或直接抓 long-lived token</td>
-        <td>10 分鐘</td>
-      </tr>
-      <tr>
-        <td>Google Cloud<br>(YouTube)</td>
-        <td>OAuth Client(桌面類型)的 Client ID + Secret</td>
-        <td>5 分鐘</td>
-      </tr>
-      <tr>
-        <td>Cloudinary</td>
-        <td>Cloud name + API key + API secret(免費方案)</td>
-        <td>3 分鐘</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <p>
-    App 內每張卡片都有提示文字告訴你「去哪個後台、點哪幾個按鈕」,看著做就好。
-  </p>
-
-  <h3>Step 3 · 發文</h3>
-
-  <p>
-    打開「發布」分頁 → 圖文或影片模式 → 填內容 → 勾平台 → 按發布。
-  </p>
-
-  <p>
-    結束。下次只要重複 Step 3。
-  </p>
-
-  <h2>為什麼沒有 TikTok?</h2>
-
-  <p>
-    TikTok 的 Content Posting API 對未審核 App 的限制是只能 SELF_ONLY(只有自己看得到),其他人看不到。對「發文工具」這個用途來說沒有意義,所以介面目前標記「未實作」。等 App 通過審核後會解禁。
-  </p>
-
-  <h2>為什麼開源?</h2>
-
-  <p>
-    幾個理由:
-  </p>
-
-  <ol>
-    <li><strong>透明度。</strong>「憑證不外洩」這種承諾,光是嘴巴講你怎麼信?程式碼開源你可以自己看,看 source code 就知道我有沒有偷偷上傳。</li>
-    <li><strong>我做這個本來就是給自己用的</strong>,既然做出來了,放出來給有同樣需求的人用,大家都省事。</li>
-    <li><strong>沒人付我錢做這件事</strong>,所以也沒有商業包袱。如果之後 Meta 改 API,有人來 PR 修 bug 也歡迎。</li>
-  </ol>
-
-  <p>
-    MIT 授權,意思是你可以拿去用、改、商用、重新發布,都行。我唯一的請求是:如果你覺得有用,<a href="https://github.com/Flashsator/social-publisher" target="_blank" rel="noopener">在 GitHub 上點顆 ⭐</a> 讓我知道有人在用就好。
+  <p class="footnote center">
+    第一次打開 Windows 會跳「未經驗證的 App」警告,點「更多資訊」→「仍要執行」就行了。<br>
+    這是因為我沒幫程式買 USD 99/年的數位簽章 ─ 獨立開發者不太花得起這個錢。
   </p>
 
   <h2>常見問題</h2>
 
-  <h3>Q. 我只想用 YouTube,要設 Cloudinary 嗎?</h3>
-  <p>不用。Cloudinary 只在 IG / Threads 發圖文時才會被呼叫。純 YouTube 上傳不會碰到。</p>
+  <h3>Q. 真的完全免費?有沒有隱藏收費?</h3>
+  <p>沒有。MIT 授權,程式碼公開在 GitHub,沒有任何付費版、進階版、訂閱制。我不靠這個賺錢。</p>
 
-  <h3>Q. Cloudinary 免費額度會不會被吃光?</h3>
-  <p>不會。每次發完(不論成敗)工具會立刻刪掉剛上傳的檔案,額度不會累積。免費方案每月 25 點對一般使用者來說用不完。</p>
+  <h3>Q. 為什麼要免費做這個?</h3>
+  <p>原本就是我自己要用的工具。做完發現好用,丟出來給有同樣痛的人用,大家都省事。</p>
 
-  <h3>Q. 為什麼 IG / Threads 一律公開?</h3>
-  <p>官方 API 不支援私人貼文,這是平台限制,不是工具的選擇。</p>
+  <h3>Q. 安全嗎?程式會不會偷偷上傳我的東西?</h3>
+  <p>程式碼完全公開在 GitHub。你可以自己看(或請工程師朋友幫你看),所有網路連線只會到 IG、Threads、YouTube、Cloudinary 四個地方,沒有任何「往我的伺服器送資料」的程式碼,因為我根本沒有伺服器。</p>
 
-  <h3>Q. YouTube 一天能上傳幾部?</h3>
-  <p>預設 Google 配額每天 10,000 units,每支影片消耗 ~1,600,所以一天大約 6 部到上限。要更多要去 Google Cloud Console 申請額度提升。</p>
+  <h3>Q. 我電腦關機時排程怎麼辦?</h3>
+  <p>不會發。這是免費桌機工具的硬限制。如果你需要 24 小時都能自動發,要付費用 SaaS。</p>
 
-  <h3>Q. 排程到時電腦關機怎麼辦?</h3>
-  <p>不會發。這是純本地工具最大的限制。如果你有「我關電腦也要發」的需求,要用 SaaS。</p>
+  <h3>Q. 為什麼沒有 TikTok?</h3>
+  <p>TikTok 官方規定:沒通過審查的工具,發出來的影片「只有自己看得到」。對「發給粉絲」這個目的來說沒意義,所以暫時不做。等政策放寬會補上。</p>
 
-  <h3>Q. 之後會上 Mac / Linux 嗎?</h3>
-  <p>Tauri 本身跨平台,程式碼層面理論上可以直接編 Mac / Linux 版。但我手邊只有 Windows 機器測試,所以目前只發 Windows。等有需求(或有人來 PR)再說。</p>
+  <h3>Q. 之後會出 Mac / Linux 版嗎?</h3>
+  <p>程式底層支援跨平台,但我手邊只有 Windows 機器可以測試。等有需求或有人幫忙測,就會出。</p>
+
+  <h3>Q. 萬一出 bug 找誰?</h3>
+  <p>到 <a href="https://github.com/Flashsator/social-publisher/issues" target="_blank" rel="noopener">GitHub Issues</a> 開 issue,我看到會盡量回。</p>
 
   <hr />
 
-  <h2>結語</h2>
+  <h2>最後</h2>
 
   <p>
-    這個工具本來只是我自己要用的東西,做完發現大概不只我有這個痛,所以打包丟出來。
+    這個工具本來只是我自己要用的東西。
   </p>
 
   <p>
-    沒有訂閱、沒有 newsletter、沒有「進階版」要賣。如果你用得上,拿去用、覺得不爽改一改;如果你 build 不起來、發文失敗、看到 bug,<strong>歡迎到 GitHub 開 issue</strong>,看到我會盡量回。
+    做完發現,可能不只我有這個痛 ─ 每天切 App、複製貼上、上傳三次,光想到就累。所以打包丟出來。
   </p>
 
   <p>
-    工具的目的是讓人少做幾件事,不是綁住誰。
+    沒有訂閱要賣。沒有 newsletter 要追蹤。沒有「進階版」要解鎖。<strong>如果你用得上,拿去用;用不上,也沒關係。</strong>
   </p>
 
-  <p style="text-align: center; margin: 48px 0;">
-    <a class="cta" href="https://github.com/Flashsator/social-publisher" target="_blank" rel="noopener">⭐ 到 GitHub 看看 / 下載</a>
+  <p>
+    如果你裝起來覺得有幫到,<a href="https://github.com/Flashsator/social-publisher" target="_blank" rel="noopener">到 GitHub 點顆 ⭐</a> 讓我知道有人在用,這就是對我最好的回饋。
+  </p>
+
+  <p class="center" style="margin: 56px 0 32px;">
+    <a class="cta" href="https://github.com/Flashsator/social-publisher" target="_blank" rel="noopener">⭐ 到 GitHub 看看</a>
   </p>
 
   <div class="author">
-    <span>📦 Social Publisher · MIT License · Windows 10/11 · 完全免費</span>
+    <span>📦 Social Publisher · MIT 開源 · Windows 10/11 · 完全免費</span>
   </div>
 
 </article>
