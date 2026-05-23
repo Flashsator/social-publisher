@@ -25,3 +25,6 @@ dist-ssr
 
 # Claude Code session artifacts
 .claude/
+
+# Release artifacts
+social-publisher_*_portable.zip
