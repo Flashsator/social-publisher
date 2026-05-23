@@ -57,12 +57,14 @@ export default function App() {
             >
               {t("navHelp")}
             </NavLink>
-            <button
-              type="button"
+            <a
+              href="https://forms.gle/MZsZ7xteb5k1Gmdq6"
+              target="_blank"
+              rel="noopener noreferrer"
               className={`${navItem} bg-(--color-accent) text-black hover:opacity-90`}
             >
-              {t("helpDonate")}
-            </button>
+              {t("helpFeedback")}
+            </a>
           </nav>
           <div className="ml-auto text-xs text-(--color-muted)">
             {t("credentialsHint")}

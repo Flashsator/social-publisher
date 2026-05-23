@@ -12,6 +12,8 @@ type Platform = {
 type HelpContent = {
   flowTitle: string;
   flowSteps: string[];
+  schedulerTitle: string;
+  schedulerNotes: string[];
   platforms: Platform[];
 };
 
@@ -23,22 +25,15 @@ const content: Record<"zh" | "en", HelpContent> = {
       "依照你勾選的平台,依序呼叫對應的官方 API 發文。",
       "不論發布成功或失敗,剛剛上傳到 Cloudinary 的檔案都會立刻被刪掉,不會占用免費額度。",
     ],
+    schedulerTitle: "排程發文要注意",
+    schedulerNotes: [
+      "排程只記錄你選的「本機檔案路徑」,到時間才會去讀檔案上傳/發送。",
+      "排程建立後,圖片/影片請留在原本的位置,不要移動、改名、刪除。",
+      "外接硬碟或隨身碟上的檔案,如果排程到時裝置沒接,會找不到檔案而失敗。",
+      "排程到時電腦必須是開機 + App 在執行(可最小化到系統匣)才會自動發。",
+      "如果不確定能不能保留檔案,建議排程前先把媒體複製到固定資料夾再選。",
+    ],
     platforms: [
-      {
-        name: "Facebook 粉專",
-        intro: "發到你的粉專,一篇可以放多張圖,或一支影片。",
-        needsCloudinary: true,
-        can: [
-          "圖文貼文最多 10 張圖。",
-          "影片從你的電腦直接上傳,不用先傳到雲端。",
-          "想要先存草稿:把「貼文公開設定」設成非公開,FB 會把它存成草稿,不會公開。",
-        ],
-        watch: [
-          "圖片需要 Cloudinary(App 會自動處理,你不用手動傳)。",
-          "影片建議不超過 1 GB,太大容易上傳失敗。",
-          "粉專 token 是從你的長期使用者 token 換出來的,換完之後永不過期。",
-        ],
-      },
       {
         name: "Instagram",
         intro: "發到 IG 商業帳號或創作者帳號:單圖、輪播、Reels 短影音。",
@@ -119,22 +114,15 @@ const content: Record<"zh" | "en", HelpContent> = {
       "Then it calls each selected platform's API one by one to publish.",
       "Whether publishing succeeded or failed, the files just uploaded to Cloudinary are deleted immediately so they don't eat free-tier credits.",
     ],
+    schedulerTitle: "Heads-up about scheduled posts",
+    schedulerNotes: [
+      "The scheduler only stores the local file path you picked at scheduling time. It reads the file when the scheduled time arrives.",
+      "Once a post is scheduled, do not move, rename, or delete the image/video files — keep them where they were.",
+      "Files on external drives or USB sticks will fail to publish if the drive isn't plugged in when the schedule fires.",
+      "The schedule only fires while your computer is on and the app is running (minimizing to the tray is fine).",
+      "If you're not sure the files will stay put, copy the media into a permanent folder before picking them.",
+    ],
     platforms: [
-      {
-        name: "Facebook Page",
-        intro: "Post to your FB Page — multiple photos or a single video.",
-        needsCloudinary: true,
-        can: [
-          "Up to 10 photos per post.",
-          "Videos upload straight from your computer — no cloud staging.",
-          "Want a draft? Set the post visibility to Private; FB saves it as an unpublished draft.",
-        ],
-        watch: [
-          "Photos need Cloudinary (handled automatically).",
-          "Keep videos under ~1 GB; larger files tend to fail.",
-          "The Page token, once derived from a long-lived user token, never expires.",
-        ],
-      },
       {
         name: "Instagram",
         intro:
@@ -269,6 +257,13 @@ export default function Help() {
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className={cardCls}>
+        <h2 className="text-base font-semibold tracking-tight">
+          {c.schedulerTitle}
+        </h2>
+        <CheckList items={c.schedulerNotes} variant="watch" />
       </section>
 
       <div className="grid gap-4 md:grid-cols-2">

@@ -31,9 +31,8 @@ type MediaItem = {
 type Result = { platform: Platform; ok: boolean; message: string; permalink?: string | null };
 type ComposeMode = "photo" | "video";
 
-const PHOTO_PLATFORMS: Platform[] = ["facebook", "instagram", "threads"];
+const PHOTO_PLATFORMS: Platform[] = ["instagram", "threads"];
 const VIDEO_PLATFORMS: Platform[] = [
-  "facebook",
   "instagram",
   "threads",
   "youtube",
@@ -86,7 +85,7 @@ export default function Compose() {
   const [text, setText] = useState("");
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [selected, setSelected] = useState<Record<Platform, boolean>>({
-    facebook: true,
+    facebook: false,
     instagram: false,
     threads: false,
     youtube: false,
@@ -194,6 +193,20 @@ export default function Compose() {
     window.addEventListener("focus", refetch);
     return () => window.removeEventListener("focus", refetch);
   }, []);
+
+  useEffect(() => {
+    setSelected((s) => {
+      let changed = false;
+      const next = { ...s };
+      for (const p of PLATFORMS) {
+        if (s[p.id] && !vaultMap[CONNECTED_KEY[p.id]]) {
+          next[p.id] = false;
+          changed = true;
+        }
+      }
+      return changed ? next : s;
+    });
+  }, [vaultMap]);
 
   useEffect(() => {
     const st = location.state as
@@ -407,6 +420,7 @@ export default function Compose() {
 
     for (const p of PLATFORMS) {
       if (!allowedSet.has(p.id) || !selected[p.id]) continue;
+      if (!vaultMap[CONNECTED_KEY[p.id]]) continue;
       try {
         let r: PublishResult;
         if (p.id === "facebook") {
@@ -560,7 +574,6 @@ export default function Compose() {
   const ytNeedsTitle = videoMode && selected.youtube && !videoTitle.trim();
 
   const hasMissing =
-    igNeedsImages ||
     fbNeedsVideo ||
     igNeedsVideo ||
     thNeedsVideo ||
@@ -865,7 +878,7 @@ export default function Compose() {
           })}
         </div>
         {photoMode && igNeedsImages && (
-          <p className="text-xs text-(--color-danger)">{t("igNeedImages")}</p>
+          <p className="text-xs text-(--color-muted)">{t("igNeedImages")}</p>
         )}
         {videoMode &&
           (fbNeedsVideo ||

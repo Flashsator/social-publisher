@@ -16,7 +16,7 @@ export const dict = {
     helpCan: "可以做什麼",
     helpWatch: "要注意",
     helpNeedCl: "需要 Cloudinary",
-    helpDonate: "小額贊助",
+    helpFeedback: "意見回饋",
 
     // preferences
     preferences: "偏好設定",
@@ -51,14 +51,15 @@ export const dict = {
     igCard: "Instagram",
     thCard: "Threads",
     ytCard: "YouTube",
-    ttCard: "TikTok",
+    ttCard: "TikTok (未實作)",
     cloudinaryCard: "Cloudinary",
 
     redirectUriBox: "Redirect URI / OAuth 重定向 URL(複製到開發者後台白名單)",
-    fbManualHint: "Meta 後台 → 你的 App → Tools → Graph API Explorer → 選擇粉專(Get Page Access Token)→ 切到 user.access_token 旁的下拉,選你的 Page → 複製「Page Access Token」(若顯示為短期,點 Debug → Extend Token 換成長期 token),貼到下方欄位。",
-    igManualHint: "Meta 後台 → Use Cases → Instagram API with Instagram Login → Customize → Settings → 找「User Token Generator」→ 點你的 IG 帳號授權 → 複製 long-lived access token,貼到下方欄位。",
-    thManualHint: "Meta 後台 → Use Cases → Threads API → Customize → Settings → 找「User Token Generator」或「Generate Token」→ 點你的帳號授權 → 複製跳出的 long-lived access token,貼到下方欄位。",
+    fbManualHint: "開啟 Meta 開發者後台 → 進入你的應用程式 → 點「工具」→「Graph API Explorer」→ 點「取得粉絲專頁存取權杖」→ 在 access_token 下拉選單選擇你的粉絲專頁 → 複製「粉絲專頁存取權杖」(若為短效,點「偵錯」→「延長存取權杖」換成長效)→ 貼到下方欄位。",
+    igManualHint: "開啟 Meta 開發者後台 → 點「使用案例」→ 選擇「Instagram API with Instagram Login」→ 點「自訂」→「設定」→ 找到「使用者權杖產生器」→ 點你的 IG 帳號進行授權 → 複製顯示的「長效存取權杖」→ 貼到下方欄位。",
+    thManualHint: "開啟 Meta 開發者後台 → 點「使用案例」→ 選擇「Threads API」→ 點「自訂」→「設定」→ 找到「使用者權杖產生器」或「產生權杖」→ 點你的帳號進行授權 → 複製顯示的「長效存取權杖」→ 貼到下方欄位。",
     thManualBtn: "驗證並儲存 token",
+    fbInspectBtn: "檢查 FB token 權限",
     tokenPh: "貼上 long-lived access token",
     tokenNeverExpires: "永不過期",
     tokenExpired: "已過期",
@@ -80,6 +81,9 @@ export const dict = {
     verifyingCloudinary: "驗證中…",
     cloudinaryOk: "驗證成功 · plan={plan} · 已用 {used}/{limit} 點",
     cloudinaryOkNoLimit: "驗證成功 · plan={plan}",
+    verifyYoutube: "驗證 YouTube",
+    verifyingYoutube: "驗證中…",
+    youtubeOk: "驗證成功 · 頻道：{title}（{id}）",
 
     dangerZone: "危險區",
     dangerHint: "從 OS 金鑰庫中刪除本應用儲存的所有憑證。",
@@ -123,7 +127,7 @@ export const dict = {
     thumbSize: "縮圖大小",
 
     publishTo: "發布到",
-    igNeedImages: "Instagram 至少需要一張圖片。",
+    igNeedImages: "Instagram 不支援純文字貼文(平台限制),若勾選 IG 會發布失敗。",
     thNeedImages: "Threads 至少需要一張圖片。",
     bothNeedImages: "Instagram 與 Threads 至少需要一張圖片。",
     needVideoAll: "請附加影片 — 所選平台只接受影片模式。",
@@ -185,7 +189,7 @@ export const dict = {
     helpCan: "What you can do",
     helpWatch: "Watch out for",
     helpNeedCl: "Needs Cloudinary",
-    helpDonate: "Buy me a coffee",
+    helpFeedback: "Feedback",
 
     preferences: "Preferences",
     language: "Language",
@@ -217,7 +221,7 @@ export const dict = {
     igCard: "Instagram",
     thCard: "Threads",
     ytCard: "YouTube",
-    ttCard: "TikTok",
+    ttCard: "TikTok (未實作)",
     cloudinaryCard: "Cloudinary",
 
     redirectUriBox: "Redirect URI (copy into the developer console whitelist)",
@@ -225,6 +229,7 @@ export const dict = {
     igManualHint: "Meta dashboard → Use Cases → Instagram API with Instagram Login → Customize → Settings → find \"User Token Generator\" → click your IG account to authorize → copy the long-lived access token, paste it below.",
     thManualHint: "Meta dashboard → Use Cases → Threads API → Customize → Settings → find \"User Token Generator\" or \"Generate Token\" → click your account to authorize → copy the long-lived access token shown, paste it below.",
     thManualBtn: "Validate and save token",
+    fbInspectBtn: "Inspect FB token scopes",
     tokenPh: "Paste long-lived access token",
     tokenNeverExpires: "Never expires",
     tokenExpired: "Expired",
@@ -246,6 +251,9 @@ export const dict = {
     verifyingCloudinary: "Verifying…",
     cloudinaryOk: "Verified · plan={plan} · {used}/{limit} credits used",
     cloudinaryOkNoLimit: "Verified · plan={plan}",
+    verifyYoutube: "Verify YouTube",
+    verifyingYoutube: "Verifying…",
+    youtubeOk: "Verified · channel: {title} ({id})",
 
     dangerZone: "Danger zone",
     dangerHint: "Removes every key this app has stored from your OS keychain.",
@@ -288,7 +296,7 @@ export const dict = {
     thumbSize: "Thumb size",
 
     publishTo: "Publish to",
-    igNeedImages: "Instagram requires at least one image.",
+    igNeedImages: "Instagram does not allow text-only posts (platform limit); selecting IG will fail.",
     thNeedImages: "Threads requires at least one image.",
     bothNeedImages: "Instagram and Threads require at least one image.",
     needVideoAll: "Attach a video — selected platforms publish only in video mode.",

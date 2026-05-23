@@ -672,6 +672,76 @@ async fn exchange_long_lived(
 /// Refresh helpers — callers (publish_*) use these to get a fresh access token
 /// from the stored refresh_token before uploading.
 
+#[derive(Serialize)]
+pub struct YoutubeVerifyResult {
+    pub channel_id: String,
+    pub channel_title: String,
+}
+
+#[derive(Deserialize)]
+struct YtChannelListResponse {
+    #[serde(default)]
+    items: Vec<YtChannelItem>,
+}
+
+#[derive(Deserialize)]
+struct YtChannelItem {
+    id: String,
+    snippet: YtChannelSnippet,
+}
+
+#[derive(Deserialize)]
+struct YtChannelSnippet {
+    title: String,
+}
+
+#[tauri::command]
+pub async fn youtube_verify(
+    client_id: String,
+    client_secret: String,
+    refresh_token: String,
+) -> AppResult<YoutubeVerifyResult> {
+    if client_id.trim().is_empty() {
+        return Err(AppError::Config("YouTube client_id is empty".into()));
+    }
+    if client_secret.trim().is_empty() {
+        return Err(AppError::Config("YouTube client_secret is empty".into()));
+    }
+    if refresh_token.trim().is_empty() {
+        return Err(AppError::Config(
+            "尚未授權 YouTube：請先按「連接 OAuth」完成 Google 登入流程。".into(),
+        ));
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()?;
+    let access_token =
+        youtube_refresh_access_token(&client, &client_id, &client_secret, &refresh_token).await?;
+
+    let resp = client
+        .get("https://www.googleapis.com/youtube/v3/channels")
+        .query(&[("part", "snippet"), ("mine", "true")])
+        .header("Authorization", format!("Bearer {}", access_token))
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::Api(format!("YT verify {}: {}", status, text)));
+    }
+
+    let parsed: YtChannelListResponse = resp.json().await?;
+    let item = parsed.items.into_iter().next().ok_or_else(|| {
+        AppError::Api("YT verify: no channel returned for this account".into())
+    })?;
+    Ok(YoutubeVerifyResult {
+        channel_id: item.id,
+        channel_title: item.snippet.title,
+    })
+}
+
 pub async fn youtube_refresh_access_token(
     client: &reqwest::Client,
     client_id: &str,
@@ -877,6 +947,81 @@ async fn debug_token_at(base: &str, token: &str) -> AppResult<i64> {
 #[tauri::command]
 pub async fn facebook_debug_token(token: String) -> AppResult<i64> {
     debug_token_at("https://graph.facebook.com/v21.0", &token).await
+}
+
+#[derive(Serialize)]
+pub struct FbTokenInspect {
+    pub token_type: String,
+    pub scopes: Vec<String>,
+    pub granular_scopes: Vec<String>,
+    pub expires_at: i64,
+    pub is_valid: bool,
+    pub user_id: Option<String>,
+    pub profile_id: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct InspectEnvelope {
+    data: InspectData,
+}
+
+#[derive(Deserialize, Default)]
+struct InspectData {
+    #[serde(default, rename = "type")]
+    token_type: String,
+    #[serde(default)]
+    scopes: Vec<String>,
+    #[serde(default)]
+    granular_scopes: Vec<GranularScope>,
+    #[serde(default)]
+    expires_at: i64,
+    #[serde(default)]
+    is_valid: bool,
+    #[serde(default)]
+    user_id: Option<String>,
+    #[serde(default)]
+    profile_id: Option<String>,
+}
+
+#[derive(Deserialize, Default)]
+struct GranularScope {
+    #[serde(default)]
+    scope: String,
+}
+
+#[tauri::command]
+pub async fn facebook_inspect_token(token: String) -> AppResult<FbTokenInspect> {
+    if token.trim().is_empty() {
+        return Err(AppError::Config("Token 為空。".into()));
+    }
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()?;
+    let url = "https://graph.facebook.com/v21.0/debug_token";
+    let resp = client
+        .get(url)
+        .query(&[
+            ("input_token", token.as_str()),
+            ("access_token", token.as_str()),
+        ])
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::Api(format!("/debug_token {}: {}", status, text)));
+    }
+    let parsed: InspectEnvelope = resp.json().await?;
+    let d = parsed.data;
+    Ok(FbTokenInspect {
+        token_type: d.token_type,
+        scopes: d.scopes,
+        granular_scopes: d.granular_scopes.into_iter().map(|g| g.scope).collect(),
+        expires_at: d.expires_at,
+        is_valid: d.is_valid,
+        user_id: d.user_id,
+        profile_id: d.profile_id,
+    })
 }
 
 #[tauri::command]

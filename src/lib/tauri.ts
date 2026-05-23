@@ -77,6 +77,33 @@ export const oauth = {
     invoke<[string, number]>("instagram_refresh_token", { accessToken }),
   threadsRefreshToken: (accessToken: string) =>
     invoke<[string, number]>("threads_refresh_token", { accessToken }),
+  youtubeVerify: (args: {
+    clientId: string;
+    clientSecret: string;
+    refreshToken: string;
+  }) =>
+    invoke<YoutubeVerifyResult>("youtube_verify", {
+      clientId: args.clientId,
+      clientSecret: args.clientSecret,
+      refreshToken: args.refreshToken,
+    }),
+  facebookInspectToken: (token: string) =>
+    invoke<FbTokenInspect>("facebook_inspect_token", { token }),
+};
+
+export type FbTokenInspect = {
+  token_type: string;
+  scopes: string[];
+  granular_scopes: string[];
+  expires_at: number;
+  is_valid: boolean;
+  user_id: string | null;
+  profile_id: string | null;
+};
+
+export type YoutubeVerifyResult = {
+  channel_id: string;
+  channel_title: string;
 };
 
 export type MediaKind = "image" | "video";

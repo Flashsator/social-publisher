@@ -19,6 +19,8 @@ const btnConnect = (connected: boolean) =>
       ? "bg-(--color-success) text-black hover:opacity-90"
       : "bg-(--color-surface-2) text-(--color-text) hover:bg-(--color-border)"
   }`;
+const btnGhost =
+  "px-3 py-2 rounded-md bg-(--color-surface-2) text-(--color-text) text-sm font-medium hover:bg-(--color-border) disabled:opacity-50 disabled:cursor-not-allowed";
 const pill = (ok: boolean, okText: string, offText: string) => ({
   className: `inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
     ok
@@ -136,7 +138,7 @@ export default function Setup() {
 
       <PreferencesCard />
 
-      <FacebookCard status={status} refresh={refreshStatus} />
+      {/* <FacebookCard status={status} refresh={refreshStatus} /> */}
       <InstagramCard status={status} refresh={refreshStatus} />
       <ThreadsCard status={status} refresh={refreshStatus} />
       <YouTubeCard status={status} refresh={refreshStatus} />
@@ -292,6 +294,7 @@ function FacebookCard({
   const expires = useVaultField("fb_page_token_expires_at");
   const [manualToken, setManualToken] = useState("");
   const [s, setS] = useState<CardState>({ busy: false, error: null, info: null });
+  const [inspect, setInspect] = useState<string | null>(null);
   useExpiryRefresh(pageToken.value, pageToken.loaded, expires.save, oauth.facebookDebugToken);
 
   const saveManualToken = async () => {
@@ -311,6 +314,31 @@ function FacebookCard({
     }
   };
 
+  const doInspect = async () => {
+    setS({ busy: true, error: null, info: null });
+    setInspect(null);
+    try {
+      const tok = pageToken.value;
+      if (!tok) throw new Error("尚未儲存 FB token");
+      const r = await oauth.facebookInspectToken(tok);
+      const all = Array.from(new Set([...r.scopes, ...r.granular_scopes]));
+      const need = ["pages_manage_posts", "pages_read_engagement"];
+      const missing = need.filter((p) => !all.includes(p));
+      const lines = [
+        `類型: ${r.token_type || "未知"}`,
+        `有效: ${r.is_valid ? "是" : "否"}`,
+        `所有 scope: ${all.length ? all.join(", ") : "(無)"}`,
+        missing.length
+          ? `❌ 缺少: ${missing.join(", ")}`
+          : "✅ 發文必要 scope 都有",
+      ];
+      setInspect(lines.join("\n"));
+      setS({ busy: false, error: null, info: null });
+    } catch (e) {
+      setS({ busy: false, error: String(e), info: null });
+    }
+  };
+
   return (
     <CardShell
       title={t("fbCard")}
@@ -325,7 +353,7 @@ function FacebookCard({
         value={manualToken}
         onChange={(e) => setManualToken(e.currentTarget.value)}
       />
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           type="button"
           className={btnConnect(!!status.fb_page_token)}
@@ -333,6 +361,14 @@ function FacebookCard({
           onClick={saveManualToken}
         >
           {t("thManualBtn")}
+        </button>
+        <button
+          type="button"
+          className={btnGhost}
+          disabled={s.busy || !pageToken.value}
+          onClick={doInspect}
+        >
+          {t("fbInspectBtn")}
         </button>
         {pageId.value && (
           <span className="text-xs text-(--color-muted)">
@@ -344,6 +380,11 @@ function FacebookCard({
 
       <ErrorLine msg={s.error} />
       <InfoLine msg={s.info} />
+      {inspect && (
+        <pre className="text-xs text-(--color-text) bg-(--color-bg) border border-(--color-border) rounded-md p-2 whitespace-pre-wrap break-all">
+          {inspect}
+        </pre>
+      )}
       <CloudinaryNote msg={t("cloudinaryWhyFb")} />
     </CardShell>
   );
@@ -557,6 +598,7 @@ function YouTubeCard({
   const clientSecret = useVaultField("yt_client_secret");
   const refreshToken = useVaultField("yt_refresh_token");
   const [s, setS] = useState<CardState>({ busy: false, error: null, info: null });
+  const [verifying, setVerifying] = useState(false);
 
   const connect = async () => {
     setS({ busy: true, error: null, info: null });
@@ -580,6 +622,29 @@ function YouTubeCard({
       setS({ busy: false, error: String(e), info: null });
     }
   };
+
+  const verify = async () => {
+    setVerifying(true);
+    setS({ busy: false, error: null, info: null });
+    try {
+      const r = await oauth.youtubeVerify({
+        clientId: clientId.value.trim(),
+        clientSecret: clientSecret.value.trim(),
+        refreshToken: refreshToken.value.trim(),
+      });
+      const info = t("youtubeOk")
+        .replace("{title}", r.channel_title)
+        .replace("{id}", r.channel_id);
+      setS({ busy: false, error: null, info });
+    } catch (e) {
+      setS({ busy: false, error: String(e), info: null });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const canVerify =
+    !!clientId.value.trim() && !!clientSecret.value.trim();
 
   return (
     <CardShell
@@ -619,6 +684,13 @@ function YouTubeCard({
       <div className="flex items-center gap-2">
         <button className={btnConnect(!!status.yt_refresh_token)} onClick={s.busy ? () => oauth.cancel() : connect}>
           {s.busy ? t("waitingBrowser") : t("connectOAuth")}
+        </button>
+        <button
+          className={btnConnect(false)}
+          onClick={verify}
+          disabled={verifying || s.busy || !canVerify}
+        >
+          {verifying ? t("verifyingYoutube") : t("verifyYoutube")}
         </button>
         {refreshToken.value && (
           <span className="text-xs text-(--color-muted)">{t("refreshTokenStored")}</span>

@@ -44,7 +44,7 @@ export const PLATFORMS: PlatformMeta[] = [
   },
   {
     id: "tiktok",
-    label: "TikTok",
+    label: "TikTok (未實作)",
     accent: "#25f4ee",
     charLimit: 2200,
     requiresImage: false,
