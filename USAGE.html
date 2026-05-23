@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>社群發文工具 使用說明</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-2: #f4f4f3;
+    --border: #e5e5e3;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+    --accent: #2563eb;
+    --warn-bg: #fff7ed;
+    --warn-border: #fb923c;
+    --warn-text: #9a3412;
+    --ok-bg: #ecfdf5;
+    --ok-border: #10b981;
+    --ok-text: #065f46;
+    --code-bg: #f1f1ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111111;
+      --surface: #1a1a1a;
+      --surface-2: #222222;
+      --border: #2e2e2e;
+      --text: #f0f0f0;
+      --muted: #9a9a9a;
+      --accent: #60a5fa;
+      --warn-bg: #2a1a0a;
+      --warn-border: #ea7c30;
+      --warn-text: #fbbf80;
+      --ok-bg: #0e2a20;
+      --ok-border: #34d399;
+      --ok-text: #6ee7b7;
+      --code-bg: #262626;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+      "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    line-height: 1.7;
+    font-size: 16px;
+  }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  header.intro {
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  h1 {
+    font-size: 28px;
+    line-height: 1.3;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  header.intro p {
+    color: var(--muted);
+    margin: 0;
+  }
+  h2 {
+    font-size: 20px;
+    margin: 40px 0 12px;
+    padding-top: 8px;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 16px;
+    margin: 24px 0 8px;
+    color: var(--text);
+  }
+  p, li {
+    color: var(--text);
+  }
+  ul, ol {
+    padding-left: 22px;
+    margin: 8px 0 16px;
+  }
+  li { margin-bottom: 6px; }
+  code {
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.92em;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  .callout {
+    border-left: 3px solid var(--warn-border);
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+  }
+  .callout strong { color: var(--warn-text); }
+  .callout.ok {
+    border-color: var(--ok-border);
+    background: var(--ok-bg);
+    color: var(--ok-text);
+  }
+  .callout.ok strong { color: var(--ok-text); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 15px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--surface-2);
+    font-weight: 600;
+  }
+  hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+  }
+  .toc h2 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .toc ol {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .toc a {
+    color: var(--text);
+    text-decoration: none;
+  }
+  .toc a:hover { color: var(--accent); }
+  a { color: var(--accent); }
+  .platform-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 12px 0;
+  }
+  .platform-card h3 {
+    margin-top: 0;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: var(--surface-2);
+    color: var(--muted);
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .badge.off {
+    background: var(--warn-bg);
+    color: var(--warn-text);
+  }
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="intro">
+  <h1>社群發文工具 使用說明</h1>
+  <p>從一台桌機,把同一篇貼文同時發到 Instagram、Threads、YouTube。所有 API 憑證只存在你電腦的 OS 金鑰庫,絕不上傳。</p>
+</header>
+
+<nav class="toc">
+  <h2>目錄</h2>
+  <ol>
+    <li><a href="#what">這個工具能做什麼</a></li>
+    <li><a href="#prep">一次性準備:申請 API 憑證</a></li>
+    <li><a href="#setup">設定頁怎麼填</a></li>
+    <li><a href="#publish">立即發文</a></li>
+    <li><a href="#schedule">排程發文</a></li>
+    <li><a href="#faq">常見問題</a></li>
+    <li><a href="#trouble">故障排除</a></li>
+  </ol>
+</nav>
+
+<h2 id="what">1. 這個工具能做什麼</h2>
+
+<p>把同一篇文(文字 / 圖片 / 影片)一次發到下列平台:</p>
+
+<div class="platform-card">
+  <h3>Instagram</h3>
+  <p>單圖、輪播(最多 10 張)、Reels 短影音。圖片/影片會自動透過 Cloudinary 中轉。</p>
+</div>
+
+<div class="platform-card">
+  <h3>Threads</h3>
+  <p>純文字、圖片、輪播、影片。圖片/影片會自動透過 Cloudinary 中轉。</p>
+</div>
+
+<div class="platform-card">
+  <h3>YouTube</h3>
+  <p>影片上傳,可設定標題、描述、公開/不公開/私人。不需要 Cloudinary。</p>
+</div>
+
+<div class="platform-card">
+  <h3>TikTok <span class="badge off">未實作</span></h3>
+  <p>介面上保留,但目前未啟用。等官方 API 審核通過後會開放。</p>
+</div>
+
+<div class="callout">
+  <strong>注意:</strong>Facebook 粉專目前因 Meta 的 <code>pages_manage_posts</code> 權限需要送官方審核,本工具暫時不提供 FB 發布。介面上的 FB 也已隱藏。
+</div>
+
+<hr />
+
+<h2 id="prep">2. 一次性準備:申請 API 憑證</h2>
+
+<p>你需要自己去各平台的開發者後台申請一組憑證。本工具只負責使用,不代理註冊。</p>
+
+<table>
+  <thead>
+    <tr><th>平台</th><th>你需要拿到的東西</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Instagram / Threads</td>
+      <td>一個 Meta App,拿到 App ID + App Secret(或直接取得 long-lived access token 也可以手動貼)</td>
+    </tr>
+    <tr>
+      <td>YouTube</td>
+      <td>Google Cloud OAuth Client(桌面應用程式類型),拿到 Client ID + Client Secret</td>
+    </tr>
+    <tr>
+      <td>Cloudinary</td>
+      <td>Cloudinary 帳號(免費版即可),拿到 Cloud name + API key + API secret</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout ok">
+  <strong>Redirect URI:</strong>每張卡片上方都會顯示一個 Redirect URI,把那串網址貼到對應開發者後台的「OAuth 重新導向 URI 白名單」,不加會被擋。
+</div>
+
+<p>各平台後台的位置在「設定」頁的每張卡片內都有提示文字(例如:<code>Meta 後台 → Use Cases → Instagram API with Instagram Login → Customize → Settings → User Token Generator</code>)。</p>
+
+<hr />
+
+<h2 id="setup">3. 設定頁怎麼填</h2>
+
+<p>第一次打開先到「設定」分頁,把要用的平台逐一連線。</p>
+
+<h3>Instagram / Threads</h3>
+<ol>
+  <li>輸入 App ID / App Secret → 按「透過 OAuth 連線」。</li>
+  <li>或照畫面提示,直接到 Meta 後台複製 long-lived token,貼到欄位。</li>
+  <li>Token 預設 60 天,工具會在你每次開啟 App 時<strong>自動延長</strong>。只要你別斷線超過 60 天就會一直續命。</li>
+</ol>
+
+<h3>YouTube</h3>
+<ol>
+  <li>輸入 Client ID / Client Secret → 按「透過 OAuth 連線」。</li>
+  <li>瀏覽器會開啟 Google 授權頁,授權完成回來。</li>
+  <li>拿到的是 refresh token,理論上永久有效;若超過 6 個月沒用會失效,重新授權即可。</li>
+</ol>
+
+<h3>Cloudinary</h3>
+<ol>
+  <li>填 Cloud name + API key + API secret(三者要是同一個 Cloudinary 帳號)。</li>
+  <li>按「驗證 Cloudinary」會去查你的剩餘額度。看到 <code>plan=Free · 已用 X/25 點</code> 就 OK。</li>
+</ol>
+
+<div class="callout">
+  <strong>危險區:</strong>設定頁最下面的「清除所有憑證」會把全部憑證刪光,動作不可逆。
+</div>
+
+<hr />
+
+<h2 id="publish">4. 立即發文</h2>
+
+<h3>圖文模式</h3>
+<ol>
+  <li>切到「發布」分頁的「圖文」。</li>
+  <li>在「說明文字」打文案。</li>
+  <li>按「+ 加入圖片」選一張或多張(最多 10 張),可以拖曳調順序。</li>
+  <li>勾選要發的平台(IG / Threads)。</li>
+  <li>按「發布」。</li>
+</ol>
+
+<h3>影片模式</h3>
+<ol>
+  <li>切到「影片」分頁。</li>
+  <li>填「影片標題」(YouTube 必填) + 「影片說明」。</li>
+  <li>按「+ 加入影片」選一支 mp4 / mov / m4v。</li>
+  <li>勾選要發的平台(IG / Threads / YouTube)。</li>
+  <li>按「發布」。</li>
+</ol>
+
+<h3>按下發布之後</h3>
+<ul>
+  <li>如果有 IG / Threads,圖片/影片會先<strong>自動上傳到你的 Cloudinary</strong>(它們的 API 只接受公開網址)。</li>
+  <li>依序呼叫每個平台 API。</li>
+  <li>不論發布成功或失敗,剛剛上傳到 Cloudinary 的檔案都會<strong>立刻被刪掉</strong>,不會累積占用空間。</li>
+  <li>每個平台的成功/失敗狀態會顯示在頁面底部「結果」區。</li>
+</ul>
+
+<hr />
+
+<h2 id="schedule">5. 排程發文</h2>
+
+<p>要在未來某個時間自動發,用排程。</p>
+
+<h3>建立排程</h3>
+<ol>
+  <li>切到「排程」分頁,選「圖文排程」或「影片排程」,按「+ 新增」。</li>
+  <li>跟發文頁一樣填內容、選平台。</li>
+  <li>在「排程時間」選未來時間(至少 60 秒之後)。</li>
+  <li>按「排程發布」。</li>
+</ol>
+
+<div class="callout">
+  <strong>⚠ 排程的重要限制:</strong>
+  <ul>
+    <li>排程只記錄你選的「<strong>本機檔案路徑</strong>」,到時間才會去讀檔案上傳/發送。</li>
+    <li>排程建立後,圖片/影片<strong>請留在原本的位置,不要移動、改名、刪除</strong>。</li>
+    <li>外接硬碟或隨身碟上的檔案,如果排程到時裝置沒接,會找不到檔案而失敗。</li>
+    <li>排程到時電腦必須是<strong>開機 + App 在執行</strong>(可最小化到系統匣)才會自動發。關掉 App 就不會發。</li>
+    <li>不確定能不能保留檔案,建議排程前先把媒體複製到一個固定資料夾再選。</li>
+  </ul>
+</div>
+
+<h3>排程怎麼跑</h3>
+<ul>
+  <li>App 開著時每 30 秒檢查一次,時間到的排程會在背景發出去。</li>
+  <li>觸發誤差通常落在 30 秒內。</li>
+  <li>觸發時的流程跟立即發布一樣:上傳到 Cloudinary → 發各平台 → 刪 Cloudinary。</li>
+</ul>
+
+<h3>編輯與刪除</h3>
+<ul>
+  <li><strong>等待中、失敗</strong>狀態的排程可以編輯或刪除。</li>
+  <li><strong>發布中、已完成</strong>的排程只能刪除,不能改。</li>
+</ul>
+
+<table>
+  <thead>
+    <tr><th>狀態</th><th>意思</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>等待中</td><td>還沒到時間</td></tr>
+    <tr><td>發布中</td><td>正在跑 API</td></tr>
+    <tr><td>已完成</td><td>全部平台都成功</td></tr>
+    <tr><td>失敗</td><td>至少一個平台失敗,展開看「發布結果」</td></tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="faq">6. 常見問題</h2>
+
+<h3>我只想用 YouTube,要設 Cloudinary 嗎?</h3>
+<p>不用。Cloudinary 只在 IG / Threads 這幾個流程才會被呼叫。純 YouTube 上傳完全不會碰到 Cloudinary。</p>
+
+<h3>為什麼 IG / Threads 一律公開?</h3>
+<p>IG / Threads 的官方 API 不支援私人貼文,這是平台限制,不是工具的選擇。</p>
+
+<h3>Cloudinary 免費額度會被吃光嗎?</h3>
+<p>不會。每次發完(不論成敗)工具會立刻刪掉剛剛上傳的檔案,不會累積占用空間或流量。免費方案每月 25 點通常用不完。</p>
+
+<h3>YouTube 一天能上傳幾部?</h3>
+<p>預設 Google 配額是 10,000 units / 天,每支影片消耗約 1,600,所以大約<strong>一天 6 部</strong>就到上限。要更多要去 Google Cloud Console 申請額度提升。</p>
+
+<h3>Token 過期怎麼辦?</h3>
+<ul>
+  <li><strong>IG / Threads</strong>:60 天 token,App 開啟時自動 refresh。超過 60 天沒開過 → 失效,重新 OAuth 授權即可。</li>
+  <li><strong>YouTube</strong>:refresh token 久未使用會失效,重新授權即可。</li>
+</ul>
+
+<h3>排程準嗎?</h3>
+<p>最小提前量 60 秒,實際觸發誤差落在 30 秒內(輪詢間隔)。<strong>但前提是 App 開著</strong>。</p>
+
+<h3>「失敗」是哪邊失敗?</h3>
+<p>排程清單展開「發布結果」會列出每個平台各自的狀態,失敗的會帶錯誤訊息。發文頁也會在底部「結果」區塊顯示。</p>
+
+<h3>憑證會被上傳到雲端嗎?</h3>
+<p>不會。所有 token、secret 都只存在你 OS 的金鑰庫(macOS Keychain / Windows Credential Manager / Linux Secret Service),工具本身不連任何後端伺服器。</p>
+
+<hr />
+
+<h2 id="trouble">7. 故障排除</h2>
+
+<h3>Cloudinary 401 <code>cloud_name mismatch</code></h3>
+<p>你 API key 跟 cloud name 不是同個帳號的。回 Cloudinary dashboard 比對三個欄位,要全部來自同一個帳號的 Settings → API Keys。</p>
+
+<h3>發布按鈕變灰</h3>
+<p>檢查這幾項:</p>
+<ul>
+  <li>有沒有勾平台</li>
+  <li>IG 圖文模式有沒有附圖(IG 不能純文字)</li>
+  <li>影片模式有沒有附影片</li>
+  <li>YouTube 有沒有填標題</li>
+</ul>
+
+<h3>OAuth 卡在「等待瀏覽器」</h3>
+<ul>
+  <li>點那行字本身會取消。</li>
+  <li>確認瀏覽器有打開、有授權完成。</li>
+  <li>確認本機 redirect 埠沒有被防火牆擋。</li>
+</ul>
+
+<h3>排程到時間沒發</h3>
+<ul>
+  <li>確認 App 那時候有在跑(沒被完全關掉)。</li>
+  <li>確認檔案沒被移動、改名、刪除。</li>
+  <li>展開該筆排程看「發布結果」是否有具體錯誤訊息。</li>
+</ul>
+
+<h3>IG / Threads token 失效</h3>
+<p>到「設定」頁該卡片重新做一次 OAuth 連線,或重新貼一份 long-lived token。</p>
+
+<footer>
+  <p>本工具開源,任何問題、回報或建議:<a href="https://github.com/Flashsator/social-publisher" target="_blank" rel="noopener">github.com/Flashsator/social-publisher</a></p>
+</footer>
+
+</div>
+</body>
+</html>
