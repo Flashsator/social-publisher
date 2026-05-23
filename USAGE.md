@@ -1,6 +1,6 @@
 # 使用者教學
 
-社群發文工具讓你從一台桌機,把同一篇貼文同時發到 Facebook 粉專、Instagram、Threads、YouTube、TikTok。所有 API 憑證只存在你電腦的 OS 金鑰庫,絕不上傳。
+社群發文工具讓你從一台桌機,把同一篇貼文同時發到 Instagram、Threads、YouTube、TikTok。所有 API 憑證只存在你電腦的 OS 金鑰庫,絕不上傳。
 
 ---
 
@@ -10,7 +10,7 @@
 
 | 平台 | 你需要的東西 |
 | --- | --- |
-| Facebook / Instagram / Threads | 一個 Meta App,拿到 App ID + App Secret |
+| Instagram / Threads | 一個 Meta App,拿到 App ID + App Secret |
 | YouTube | Google Cloud OAuth Client(桌面應用程式類型),拿到 Client ID + Client Secret |
 | TikTok | TikTok Developer App,拿到 Client Key + Client Secret |
 | Cloudinary | Cloudinary 帳號,拿到 Cloud name + API key + API secret |
@@ -24,11 +24,6 @@
 ## 2. 設定頁
 
 第一次打開先到「設定」頁:
-
-### Facebook 粉專
-1. 輸入 App ID / App Secret → 按「透過 OAuth 連線」。
-2. 瀏覽器開啟後授權,回來會列出你的粉專,選一個。
-3. Token 從長期 user token 換成 page token 後**永不過期**,不用再管。
 
 ### Instagram / Threads
 1. 輸入 App ID / App Secret → 按「透過 OAuth 連線」(或照畫面提示手動貼 long-lived token)。
@@ -57,14 +52,12 @@
 1. 切到「圖文」分頁。
 2. 在「說明文字」打文案。
 3. 按「+ 加入圖片」選一張或多張(最多 10 張),可以拖曳調順序。
-4. 在「發布到」勾選要發的平台(FB / IG / Threads)。
-5. 「貼文公開設定」:
-   - 公開:正常發布。
-   - 非公開:FB 會存成草稿;IG / Threads 沒有私人模式,即使選非公開也會公開。
+4. 在「發布到」勾選要發的平台(IG / Threads)。
+5. 「貼文公開設定」:IG / Threads 沒有私人模式,即使選非公開也會公開(平台限制)。
 6. 按「發布」。
 
 按下發布後流程是:
-- 自動把圖片上傳到 Cloudinary(IG / Threads / FB 圖文需要公開網址)
+- 自動把圖片上傳到 Cloudinary(IG / Threads 圖文需要公開網址)
 - 依序呼叫每個平台 API
 - 不論成敗,把剛剛上傳到 Cloudinary 的檔案立刻刪除,不會占用免費額度
 
@@ -72,7 +65,7 @@
 1. 切到「影片」分頁。
 2. 填「影片標題」(YouTube 必填) + 「影片說明」。
 3. 按「+ 加入影片」選一支 mp4 / mov / m4v。
-4. 在「發布到」勾選 FB / IG / Threads / YouTube / TikTok。
+4. 在「發布到」勾選 IG / Threads / YouTube / TikTok。
 5. 如果勾了 TikTok,會出現:
    - **發布模式**:「送到收件匣」(在 TikTok App 內二次確認)或「直接發布」(立即公開,但未審核的 App 只能 SELF_ONLY)
    - **上傳來源**:「本機上傳」(≤ 64 MiB)或「從 URL 拉取」(走 Cloudinary)
@@ -121,7 +114,7 @@
 ## 6. 常見問題
 
 **Q. 我只想用 YouTube 或 TikTok 上傳影片,要設 Cloudinary 嗎?**
-不用。Cloudinary 只在 IG / Threads / FB 圖文 / TikTok「從 URL 拉取」這幾個流程才會被呼叫。
+不用。Cloudinary 只在 IG / Threads 圖文 / TikTok「從 URL 拉取」這幾個流程才會被呼叫。
 
 **Q. 為什麼 IG 一律公開?**
 IG Graph API 不支援私人貼文,這是平台限制,不是工具的選擇。
@@ -134,7 +127,6 @@ IG Graph API 不支援私人貼文,這是平台限制,不是工具的選擇。
 
 **Q. Token 過期怎麼辦?**
 - IG / Threads 60 天 token,App 開啟時自動 refresh。超過 60 天沒開過 → 失效,重新 OAuth 授權即可。
-- FB Page token 永不過期(長期版本)。
 - YouTube / TikTok refresh token 久未使用會失效,重新授權。
 
 **Q. 排程準嗎?**

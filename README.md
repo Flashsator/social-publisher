@@ -30,7 +30,6 @@
 | Instagram | ✓ | ✓ (Reels) | 自動透過 Cloudinary 中轉 |
 | Threads | ✓ | ✓ | 自動透過 Cloudinary 中轉 |
 | YouTube | — | ✓ | 直接從本機上傳,不需 Cloudinary |
-| Facebook 粉專 | — | — | 已隱藏,等待 Meta 審核 `pages_manage_posts` |
 | TikTok | — | — | 介面保留,標記「未實作」 |
 
 ---
@@ -137,8 +136,7 @@ social-publisher/
 │           ├── instagram.rs
 │           ├── threads.rs
 │           ├── youtube.rs
-│           ├── tiktok.rs
-│           └── facebook.rs   # 程式碼保留,UI 已隱藏
+│           └── tiktok.rs
 ├── USAGE.md                  # 完整使用教學(Markdown)
 ├── USAGE.html                # 完整使用教學(瀏覽器版)
 └── README.md
@@ -159,9 +157,6 @@ social-publisher/
 
 **Q. YouTube 一天能上傳幾部?**
 預設 Google 配額一天約 6 部(每支消耗 ~1,600 units / 共 10,000)。需要更多去 Google Cloud Console 申請額度提升。
-
-**Q. 為什麼沒有 Facebook?**
-Meta 在 2024-2025 改版後,粉專發文(`pages_manage_posts`)必須通過 App Review 才能對 admin 以外的人公開使用,而審核流程目前對個人開發者非常嚴格。所以本工具暫時把 FB 介面隱藏,後端程式碼保留,等審核流程明朗後再恢復。
 
 更多 FAQ 請見 [USAGE.md](USAGE.md#常見問題)。
 
@@ -199,6 +194,6 @@ MIT — 詳見 [LICENSE](LICENSE)。
 ## 致謝
 
 - [Tauri](https://tauri.app) — 跨平台桌面框架
-- [Meta Graph API](https://developers.facebook.com/docs/graph-api) / [Threads API](https://developers.facebook.com/docs/threads)
+- [Instagram Graph API](https://developers.facebook.com/docs/instagram-platform) / [Threads API](https://developers.facebook.com/docs/threads)
 - [YouTube Data API v3](https://developers.google.com/youtube/v3)
 - [Cloudinary](https://cloudinary.com) — 媒體中轉

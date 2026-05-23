@@ -309,7 +309,7 @@
   </p>
 
   <ul>
-    <li>連線到 <code>graph.facebook.com</code> / <code>graph.threads.net</code>(IG / Threads API)</li>
+    <li>連線到 <code>graph.instagram.com</code> / <code>graph.threads.net</code>(IG / Threads API)</li>
     <li>連線到 <code>googleapis.com</code>(YouTube API)</li>
     <li>連線到 <code>api.cloudinary.com</code>(你自己的 Cloudinary 帳號,中轉媒體用)</li>
   </ul>
@@ -357,7 +357,7 @@
       <li>需要管理客戶的數十個帳號(請用 Buffer / Hootsuite)</li>
       <li>你的工作流程是手機操作,電腦不常開</li>
       <li>不想碰任何技術設定(雖然只要一次,但要 30 分鐘左右)</li>
-      <li>需要 Facebook 粉專、TikTok(目前因為平台政策,這兩個沒有)</li>
+      <li>需要 TikTok(目前因為平台政策還沒實作)</li>
     </ul>
   </div>
 
@@ -422,22 +422,10 @@
     結束。下次只要重複 Step 3。
   </p>
 
-  <h2>為什麼沒有 Facebook 跟 TikTok?</h2>
+  <h2>為什麼沒有 TikTok?</h2>
 
   <p>
-    老實說。
-  </p>
-
-  <p>
-    <strong>Facebook 粉專</strong>:Meta 在 2024-2025 把粉專發文權限(<code>pages_manage_posts</code>)鎖到必須通過 App Review。審核流程目前對個人開發者非常嚴格,沒過審核的 App 只有 admin 自己看得到貼文。我在開發時實測無法繞過,所以目前介面把 FB 隱藏(<strong>後端程式碼保留</strong>,等 Meta 流程明朗後再開回來)。
-  </p>
-
-  <p>
-    <strong>TikTok</strong>:類似情況。TikTok 的 Content Posting API 對未審核 App 限制是只能 SELF_ONLY(只有自己看得到),其他人看不到。對「發文工具」這個用途來說沒有意義,所以介面標記「未實作」。
-  </p>
-
-  <p>
-    這兩個平台的 API 程式碼還在,等政策放寬或 App 通過審核後會解禁。
+    TikTok 的 Content Posting API 對未審核 App 的限制是只能 SELF_ONLY(只有自己看得到),其他人看不到。對「發文工具」這個用途來說沒有意義,所以介面目前標記「未實作」。等 App 通過審核後會解禁。
   </p>
 
   <h2>為什麼開源?</h2>
@@ -485,7 +473,7 @@
   </p>
 
   <p>
-    沒有粉專、沒有 newsletter、沒有「進階版」要賣。如果你用得上,拿去用、覺得不爽改一改;如果你 build 不起來、發文失敗、看到 bug,<strong>歡迎到 GitHub 開 issue</strong>,看到我會盡量回。
+    沒有訂閱、沒有 newsletter、沒有「進階版」要賣。如果你用得上,拿去用、覺得不爽改一改;如果你 build 不起來、發文失敗、看到 bug,<strong>歡迎到 GitHub 開 issue</strong>,看到我會盡量回。
   </p>
 
   <p>
